@@ -6,13 +6,14 @@ import Shop from "./pages/Shop";
 import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Orders from "./pages/Orders";
+import ProductDetail from "./pages/ProductDetail";
 
 function App() {
   const [cartCount, setCartCount] = useState(0);
 
   // Adds 1 to the cart count
-  function handleAddToCart() {
-    setCartCount(cartCount + 1);
+  function handleAddToCart(quantity:number =1) {
+    setCartCount(cartCount + quantity);
   }
 
   return (
@@ -26,6 +27,10 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
           <Route path="/orders" element={<Orders />} />
+          <Route
+  path="/product/:id"
+  element={<ProductDetail onAddToCart={handleAddToCart} />}
+/>
         </Routes>
       </main>
     </>
