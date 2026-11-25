@@ -1,9 +1,6 @@
 import { Link } from "react-router-dom";
-import { useCart, getItemPrice } from "../context/useCart";
+import { useCart, getItemPrice, getDeliveryFee, FREE_DELIVERY_FROM } from "../context/useCart";
 import styles from "./Cart.module.css";
-
-const FREE_DELIVERY_FROM = 999;
-const DELIVERY_FEE = 60;
 
 function Cart() {
   const { items, totalCount, subtotal, increase, decrease, removeFromCart } =
@@ -25,7 +22,7 @@ function Cart() {
     );
   }
 
-  const delivery = subtotal >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
+  const delivery = getDeliveryFee(subtotal);
   const total = subtotal + delivery;
 
   return (

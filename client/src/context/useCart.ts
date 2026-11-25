@@ -29,6 +29,14 @@ export function getItemPrice(item: CartItem) {
   return item.product.price + sizeExtraPrice[item.size];
 }
 
+// Delivery is free from this subtotal upwards
+export const FREE_DELIVERY_FROM = 999;
+const DELIVERY_FEE = 60;
+
+export function getDeliveryFee(subtotal: number) {
+  return subtotal >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
+}
+
 // Our own hook: any component can call useCart() to open the box
 export function useCart() {
   const context = useContext(CartContext);
