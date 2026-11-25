@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getOrders } from "../data/orders";
-import type { OrderStatus } from "../data/orders";
-import { getItemPrice } from "../context/useCart";
+import { getOrders } from "@/services/orderService";
+import { getItemPrice } from "@/utils/pricing";
+import type { OrderStatus } from "@/types/order";
 import styles from "./Orders.module.css";
 
 const steps: OrderStatus[] = ["Placed", "Shipped", "Delivered"];

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { AuthContext } from "./useAuth";
-import type { User } from "./useAuth";
+import { AuthContext } from "@/context/auth/useAuth";
+import type { User } from "@/types/user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Load the saved user (or nobody)

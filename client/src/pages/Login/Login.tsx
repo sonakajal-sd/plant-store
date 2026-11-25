@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/useAuth";
+import { useAuth } from "@/context/auth/useAuth";
 import styles from "./Login.module.css";
 
 type Mode = "login" | "register";

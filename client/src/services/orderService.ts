@@ -1,24 +1,4 @@
-import type { CartItem } from "../context/useCart";
-
-export type CustomerDetails = {
-  name: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-};
-
-export type OrderStatus = "Placed" | "Shipped" | "Delivered";
-
-export type Order = {
-  id: string;
-  date: string;
-  customer: CustomerDetails;
-  items: CartItem[];
-  total: number;
-  status: OrderStatus;
-};
+import type { Order } from "@/types/order";
 
 // Read all saved orders
 export function getOrders(): Order[] {

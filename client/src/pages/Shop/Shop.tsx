@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { categories, getProducts } from "../data/products";
-import ProductCard from "../components/ProductCard/ProductCard";
+import { categories } from "@/data/products";
+import { getProducts } from "@/services/productService";
+import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./Shop.module.css";
 
 // The only 3 values sort can have

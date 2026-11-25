@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getProducts, sizes, sizeExtraPrice } from "../data/products";
-import type { Size } from "../data/products";
-import { useCart } from "../context/useCart";
-import ProductCard from "../components/ProductCard/ProductCard";
+import { useCart } from "@/context/cart/useCart";
+import { sizes, sizeExtraPrice } from "@/data/products";
+import { getProducts } from "@/services/productService";
+import type { Size } from "@/types/product";
+import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./ProductDetail.module.css";
 
 function ProductDetail() {

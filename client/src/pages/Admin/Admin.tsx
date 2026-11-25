@@ -1,11 +1,12 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { useAuth, ADMIN_EMAIL } from "../context/useAuth";
-import { getProducts, saveProducts, categories } from "../data/products";
-import type { Product } from "../data/products";
-import { getOrders, saveOrders } from "../data/orders";
-import type { Order, OrderStatus } from "../data/orders";
+import { useAuth, ADMIN_EMAIL } from "@/context/auth/useAuth";
+import { categories } from "@/data/products";
+import { getOrders, saveOrders } from "@/services/orderService";
+import { getProducts, saveProducts } from "@/services/productService";
+import type { Order, OrderStatus } from "@/types/order";
+import type { Product } from "@/types/product";
 import styles from "./Admin.module.css";
 
 type Tab = "products" | "orders";

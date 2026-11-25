@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { getProducts, categories } from "../data/products";
-import ProductCard from "../components/ProductCard/ProductCard";
+import { categories } from "@/data/products";
+import { getProducts } from "@/services/productService";
+import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./Home.module.css";
 
 function Home() {

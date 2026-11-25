@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider } from "@/context/auth/AuthProvider";
+import { CartProvider } from "@/context/cart/CartProvider";
 import App from "./App";
 import "./index.css";
 

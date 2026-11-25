@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { Product, Size } from "../data/products";
-import { CartContext, getItemPrice } from "./useCart";
-import type { CartItem } from "./useCart";
+import { CartContext } from "@/context/cart/useCart";
+import { getItemPrice } from "@/utils/pricing";
+import type { CartItem } from "@/types/cart";
+import type { Product, Size } from "@/types/product";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   // Load the saved cart from the browser (or start empty)

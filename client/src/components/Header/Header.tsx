@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
-import { useCart } from "../../context/useCart";
-import { useAuth , ADMIN_EMAIL} from "../../context/useAuth";
+import { useAuth, ADMIN_EMAIL } from "@/context/auth/useAuth";
+import { useCart } from "@/context/cart/useCart";
 import styles from "./Header.module.css";
 
 function Header() {

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { useCart, getItemPrice, getDeliveryFee, FREE_DELIVERY_FROM } from "../context/useCart";
+import { useCart } from "@/context/cart/useCart";
+import { getItemPrice, getDeliveryFee, FREE_DELIVERY_FROM } from "@/utils/pricing";
 import styles from "./Cart.module.css";
 
 function Cart() {

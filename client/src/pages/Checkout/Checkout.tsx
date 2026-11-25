@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { useCart, getItemPrice, getDeliveryFee } from "../context/useCart";
-import { saveOrder } from "../data/orders";
-import type { CustomerDetails, Order } from "../data/orders";
+import { useCart } from "@/context/cart/useCart";
+import { saveOrder } from "@/services/orderService";
+import { getItemPrice, getDeliveryFee } from "@/utils/pricing";
+import type { CustomerDetails, Order } from "@/types/order";
 import styles from "./Checkout.module.css";
 
 // An error message for each field (Partial = not every field needs one)

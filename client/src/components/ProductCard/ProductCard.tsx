@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import type { Product } from "../../data/products";
-import { useCart } from "../../context/useCart";
+import { useCart } from "@/context/cart/useCart";
+import type { Product } from "@/types/product";
 import styles from "./ProductCard.module.css";
 
 type ProductCardProps = {

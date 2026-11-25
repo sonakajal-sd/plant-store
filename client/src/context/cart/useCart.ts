@@ -1,14 +1,6 @@
 import { createContext, useContext } from "react";
-import { sizeExtraPrice } from "../data/products";
-import type { Product, Size } from "../data/products";
-
-// One line in the cart
-export type CartItem = {
-  id: string; // e.g. "1-Medium" (product id + size)
-  product: Product;
-  size: Size;
-  quantity: number;
-};
+import type { CartItem } from "@/types/cart";
+import type { Product, Size } from "@/types/product";
 
 // Everything the cart box gives to components
 export type CartContextType = {
@@ -23,19 +15,6 @@ export type CartContextType = {
 };
 
 export const CartContext = createContext<CartContextType | null>(null);
-
-// Price of one item (base price + size extra)
-export function getItemPrice(item: CartItem) {
-  return item.product.price + sizeExtraPrice[item.size];
-}
-
-// Delivery is free from this subtotal upwards
-export const FREE_DELIVERY_FROM = 999;
-const DELIVERY_FEE = 60;
-
-export function getDeliveryFee(subtotal: number) {
-  return subtotal >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
-}
 
 // Our own hook: any component can call useCart() to open the box
 export function useCart() {

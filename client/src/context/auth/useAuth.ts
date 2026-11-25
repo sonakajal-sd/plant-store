@@ -1,9 +1,6 @@
 import { createContext, useContext } from "react";
+import type { User } from "@/types/user";
 
-export type User = {
-  name: string;
-  email: string;
-};
 // The email that counts as the store admin (for now)
 export const ADMIN_EMAIL = "admin@leafandclay.com";
 
