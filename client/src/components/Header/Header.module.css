@@ -1,0 +1,82 @@
+.header {
+  position: sticky;
+  top: 0;
+  background: var(--cream);
+  border-bottom: 1px solid var(--beige);
+}
+
+.inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 18px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  font-weight: 500;
+}
+
+.nav a:hover {
+  color: var(--terracotta);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--beige);
+  background: var(--card);
+  font: inherit;
+}
+
+.iconButton,
+.cartButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.iconButton {
+  border: 1px solid var(--beige);
+  background: var(--card);
+}
+
+.cartButton {
+  position: relative;
+  background: var(--brown);
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
