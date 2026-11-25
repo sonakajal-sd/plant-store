@@ -3,15 +3,19 @@ import styles from "./ProductCard.module.css";
 
 type ProductCardProps = {
   product: Product;
-  onAddToCart: () => void; // a function that returns nothing
+  onAddToCart: () => void;
 };
 
 function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const isOutOfStock = product.stock === 0;
+
   return (
     <article className={styles.card}>
       <div className={styles.image}>
         <span className={styles.plant}>🪴</span>
-        <span className={styles.tag}>{product.tag}</span>
+        <span className={styles.tag}>
+          {isOutOfStock ? "Out of stock" : product.tag}
+        </span>
       </div>
 
       <div className={styles.info}>
@@ -21,8 +25,12 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
       <div className={styles.bottom}>
         <span className={styles.price}>₹ {product.price}</span>
-        <button className={styles.button} onClick={onAddToCart}>
-          Add to cart
+        <button
+          className={styles.button}
+          onClick={onAddToCart}
+          disabled={isOutOfStock}
+        >
+          {isOutOfStock ? "Sold out" : "Add to cart"}
         </button>
       </div>
     </article>

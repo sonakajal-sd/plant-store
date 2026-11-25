@@ -32,7 +32,11 @@ function Home({ onAddToCart }: HomeProps) {
         <h2 className={styles.sectionTitle}>Shop by category</h2>
         <div className={styles.categoryGrid}>
           {categories.map((category) => (
-            <Link to="/shop" key={category} className={styles.categoryCard}>
+            <Link
+  to={`/shop?category=${encodeURIComponent(category)}`}
+  key={category}
+  className={styles.categoryCard}
+>
               <span className={styles.categoryIcon}>🌱</span>
               <span className={styles.categoryName}>{category}</span>
               <span className={styles.explore}>Explore →</span>

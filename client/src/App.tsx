@@ -22,7 +22,7 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home onAddToCart={handleAddToCart} />} />
-          <Route path="/shop" element={<Shop />} />
+          <Route path="/shop" element={<Shop onAddToCart={handleAddToCart} />} /> 
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
           <Route path="/orders" element={<Orders />} />

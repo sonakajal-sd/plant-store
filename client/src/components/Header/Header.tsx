@@ -16,8 +16,8 @@ function Header({ cartCount }: HeaderProps) {
 
         <nav className={styles.nav}>
           <NavLink to="/shop">Shop</NavLink>
-          <NavLink to="/shop">Indoor</NavLink>
-          <NavLink to="/shop">Outdoor</NavLink>
+          <NavLink to="/shop?category=Indoor">Indoor</NavLink>
+<NavLink to="/shop?category=Outdoor">Outdoor</NavLink>
           <NavLink to="/orders">My Orders</NavLink>
         </nav>
 

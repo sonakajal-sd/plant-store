@@ -73,3 +73,9 @@
 .button:hover {
   background: var(--terracotta);
 }
+
+.button:disabled{
+    background: var(--beige);
+    color:var(--brown-light);
+    cursor: not-allowed;
+}
