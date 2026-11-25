@@ -1,9 +1,11 @@
 import { Link, NavLink } from "react-router-dom";
 import { useCart } from "../../context/useCart";
+import { useAuth } from "../../context/useAuth";
 import styles from "./Header.module.css";
 
 function Header() {
-  const {totalCount}= useCart();
+  const { totalCount } = useCart();
+  const { user } = useAuth();
   
   return (
     <header className={styles.header}>
@@ -27,7 +29,7 @@ function Header() {
           />
 
           <Link to="/login" className={styles.iconButton}>
-            👤
+            {user ? user.name.charAt(0).toUpperCase() : "👤"}
           </Link>
 
           <Link to="/cart" className={styles.cartButton}>
