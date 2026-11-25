@@ -1,0 +1,177 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-family: var(--font-heading);
+  font-size: 48px;
+}
+
+.subtitle {
+  margin: 0 0 28px;
+  color: var(--brown-light);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.topRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.orderId {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+}
+
+.muted {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--brown-light);
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.total {
+  font-size: 19px;
+}
+
+/* Status badges: one class per status */
+.badgePlaced,
+.badgeShipped,
+.badgeDelivered {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+
+.badgePlaced {
+  background: #f1e6d6;
+  color: #7a3a22;
+}
+
+.badgeShipped {
+  background: #e7dcc5;
+  color: var(--olive);
+}
+
+.badgeDelivered {
+  background: var(--olive);
+  color: var(--cream);
+}
+
+/* Tracker */
+.tracker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar,
+.barDone {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--beige);
+}
+
+.barDone {
+  background: var(--olive);
+}
+
+.stepLabel {
+  font-size: 14px;
+  color: var(--brown-light);
+}
+
+.stepActive {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detailsButton {
+  align-self: flex-end;
+  border: 1.5px solid var(--brown);
+  background: transparent;
+  color: var(--brown);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.details {
+  border-top: 1px solid var(--beige);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Empty */
+.empty {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 64px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.empty p {
+  margin: 0 0 8px;
+  color: var(--brown-light);
+}
+
+.emptyIcon {
+  font-size: 56px;
+}
+
+.primaryButton {
+  background: var(--terracotta);
+  color: white;
+  padding: 15px 26px;
+  border-radius: 999px;
+  font-weight: 700;
+}
