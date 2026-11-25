@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header/Header";
 import Home from "./pages/Home";
@@ -7,13 +8,20 @@ import Login from "./pages/Login";
 import Orders from "./pages/Orders";
 
 function App() {
+  const [cartCount, setCartCount] = useState(0);
+
+  // Adds 1 to the cart count
+  function handleAddToCart() {
+    setCartCount(cartCount + 1);
+  }
+
   return (
     <>
-      <Header cartCount={0} />
+      <Header cartCount={cartCount} />
 
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home onAddToCart={handleAddToCart} />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
