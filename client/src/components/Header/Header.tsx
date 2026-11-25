@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useCart } from "../../context/useCart";
-import { useAuth } from "../../context/useAuth";
+import { useAuth , ADMIN_EMAIL} from "../../context/useAuth";
 import styles from "./Header.module.css";
 
 function Header() {
@@ -19,6 +19,7 @@ function Header() {
           <NavLink to="/shop?category=Indoor">Indoor</NavLink>
 <NavLink to="/shop?category=Outdoor">Outdoor</NavLink>
           <NavLink to="/orders">My Orders</NavLink>
+          {user?.email === ADMIN_EMAIL && <NavLink to="/admin">Admin</NavLink>}
         </nav>
 
         <div className={styles.actions}>

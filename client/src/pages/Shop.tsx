@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { products, categories } from "../data/products";
+import { categories, getProducts } from "../data/products";
 import ProductCard from "../components/ProductCard/ProductCard";
 import styles from "./Shop.module.css";
 
@@ -8,6 +8,8 @@ import styles from "./Shop.module.css";
 type SortOption = "popular" | "price-low" | "price-high";
 
 function Shop() {
+
+  const products= getProducts();
   // Read the category from the URL, e.g. /shop?category=Indoor
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category") ?? "All";

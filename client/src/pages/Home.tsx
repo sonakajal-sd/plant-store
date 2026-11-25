@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
-import { products, categories } from "../data/products";
+import { getProducts, categories } from "../data/products";
 import ProductCard from "../components/ProductCard/ProductCard";
 import styles from "./Home.module.css";
 
 function Home() {
+    const products= getProducts();
+
   return (
     <div className={styles.page}>
       {/* 1. Hero section */}

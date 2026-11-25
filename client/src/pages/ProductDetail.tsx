@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { products, sizes, sizeExtraPrice } from "../data/products";
+import { getProducts, sizes, sizeExtraPrice } from "../data/products";
 import type { Size } from "../data/products";
 import { useCart } from "../context/useCart";
 import ProductCard from "../components/ProductCard/ProductCard";
@@ -17,6 +17,7 @@ function ProductDetail() {
 
 function ProductDetailContent({ id }: { id: string | undefined }) {
   const { addToCart } = useCart();
+  const products = getProducts();
 
   // 2. Find the product with that id
   const product = products.find((p) => p.id === Number(id));

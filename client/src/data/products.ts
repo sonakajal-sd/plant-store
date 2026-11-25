@@ -8,7 +8,7 @@ export type Product = {
   stock: number; // how many we have. 0 = out of stock
 };
 
-export const products: Product[] = [
+export const defaultProducts: Product[] = [
   { id: 1, name: "Snake Plant", category: "Indoor", price: 349, care: "Low light · Water every 2 weeks", tag: "Beginner friendly", stock: 24 },
   { id: 2, name: "Money Plant", category: "Indoor", price: 199, care: "Indirect light · Water weekly", tag: "Best seller", stock: 40 },
   { id: 3, name: "Peace Lily", category: "Flowering", price: 449, care: "Shade · Keep soil moist", tag: "Flowering", stock: 6 },
@@ -37,3 +37,14 @@ export const sizeExtraPrice: Record<Size, number> = {
   Medium: 100,
   Large: 200,
 };
+
+// Read products: saved list if the admin changed something, else the default list
+export function getProducts(): Product[] {
+  const saved = localStorage.getItem("products");
+  return saved ? (JSON.parse(saved) as Product[]) : defaultProducts;
+}
+
+// Save the whole product list
+export function saveProducts(list: Product[]) {
+  localStorage.setItem("products", JSON.stringify(list));
+}
