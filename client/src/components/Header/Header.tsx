@@ -1,12 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
+import { useCart } from "../../context/useCart";
 import styles from "./Header.module.css";
 
-// The Header needs one prop: a number for the cart badge
-type HeaderProps = {
-  cartCount: number;
-};
-
-function Header({ cartCount }: HeaderProps) {
+function Header() {
+  const {totalCount}= useCart();
+  
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -34,7 +32,7 @@ function Header({ cartCount }: HeaderProps) {
 
           <Link to="/cart" className={styles.cartButton}>
             🛒
-            <span className={styles.badge}>{cartCount}</span>
+            <span className={styles.badge}>{totalCount}</span>
           </Link>
         </div>
       </div>

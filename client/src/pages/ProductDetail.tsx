@@ -1,37 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { products } from "../data/products";
+import { products, sizes, sizeExtraPrice } from "../data/products";
+import type { Size } from "../data/products";
+import { useCart } from "../context/useCart";
 import ProductCard from "../components/ProductCard/ProductCard";
 import styles from "./ProductDetail.module.css";
 
-type ProductDetailProps = {
-  onAddToCart: (quantity: number) => void;
-};
-
-type Size = "Small" | "Medium" | "Large";
-
-// Extra price for each size
-const sizeExtraPrice: Record<Size, number> = {
-  Small: 0,
-  Medium: 100,
-  Large: 200,
-};
-
-const sizes: Size[] = ["Small", "Medium", "Large"];
-
-function ProductDetail({ onAddToCart }: ProductDetailProps) {
+function ProductDetail() {
   // 1. Get the id from the URL (it is always a string)
   const { id } = useParams();
 
   // Using the id as a key gives each plant a fresh component,
   // so size and quantity reset when we open a different plant
-  return <ProductDetailContent key={id} id={id} onAddToCart={onAddToCart} />;
+  return <ProductDetailContent key={id} id={id} />;
 }
 
-function ProductDetailContent({
-  id,
-  onAddToCart,
-}: ProductDetailProps & { id: string | undefined }) {
+function ProductDetailContent({ id }: { id: string | undefined }) {
+  const { addToCart } = useCart();
 
   // 2. Find the product with that id
   const product = products.find((p) => p.id === Number(id));
@@ -131,7 +116,7 @@ function ProductDetailContent({
 
             <button
               className={styles.addButton}
-              onClick={() => onAddToCart(quantity)}
+             onClick={() => addToCart(product, size, quantity)}
               disabled={isOutOfStock}
             >
               {isOutOfStock ? "Sold out" : "Add to cart"}
@@ -150,11 +135,7 @@ function ProductDetailContent({
           <h2 className={styles.sectionTitle}>You may also like</h2>
           <div className={styles.relatedGrid}>
             {related.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onAddToCart={() => onAddToCart(1)}
-              />
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>

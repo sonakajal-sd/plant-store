@@ -3,11 +3,7 @@ import { products, categories } from "../data/products";
 import ProductCard from "../components/ProductCard/ProductCard";
 import styles from "./Home.module.css";
 
-type HomeProps = {
-  onAddToCart: () => void;
-};
-
-function Home({ onAddToCart }: HomeProps) {
+function Home() {
   return (
     <div className={styles.page}>
       {/* 1. Hero section */}
@@ -50,11 +46,7 @@ function Home({ onAddToCart }: HomeProps) {
         <h2 className={styles.sectionTitle}>Best sellers</h2>
         <div className={styles.productGrid}>
           {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={onAddToCart}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       </section>

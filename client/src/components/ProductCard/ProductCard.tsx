@@ -1,13 +1,14 @@
-import type { Product } from "../../data/products";
-import styles from "./ProductCard.module.css";
 import { Link } from "react-router-dom";
+import type { Product } from "../../data/products";
+import { useCart } from "../../context/useCart";
+import styles from "./ProductCard.module.css";
 
 type ProductCardProps = {
   product: Product;
-  onAddToCart: () => void;
 };
 
-function ProductCard({ product, onAddToCart }: ProductCardProps) {
+function ProductCard({ product }: ProductCardProps) {
+  const { addToCart } = useCart();
   const isOutOfStock = product.stock === 0;
 
   return (
@@ -29,7 +30,7 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <span className={styles.price}>₹ {product.price}</span>
         <button
           className={styles.button}
-          onClick={()=>onAddToCart()}
+          onClick={() => addToCart(product, "Small", 1)}
           disabled={isOutOfStock}
         >
           {isOutOfStock ? "Sold out" : "Add to cart"}

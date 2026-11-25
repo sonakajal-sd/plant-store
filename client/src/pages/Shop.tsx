@@ -4,14 +4,10 @@ import { products, categories } from "../data/products";
 import ProductCard from "../components/ProductCard/ProductCard";
 import styles from "./Shop.module.css";
 
-type ShopProps = {
-  onAddToCart: () => void;
-};
-
 // The only 3 values sort can have
 type SortOption = "popular" | "price-low" | "price-high";
 
-function Shop({ onAddToCart }: ShopProps) {
+function Shop() {
   // Read the category from the URL, e.g. /shop?category=Indoor
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category") ?? "All";
@@ -88,11 +84,7 @@ function Shop({ onAddToCart }: ShopProps) {
         {/* Right: product grid */}
         <div className={styles.grid}>
           {sorted.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={onAddToCart}
-            />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       </div>

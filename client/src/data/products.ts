@@ -27,3 +27,13 @@ export const categories: string[] = [
   "Flowering",
   "Pots & Planters",
 ];
+
+export type Size = "Small" | "Medium" | "Large";
+
+export const sizes: Size[] = ["Small", "Medium", "Large"];
+
+export const sizeExtraPrice: Record<Size, number> = {
+  Small: 0,
+  Medium: 100,
+  Large: 200,
+};
