@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:17
+    container_name: plantstore-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: plantuser
+      POSTGRES_PASSWORD: plantpass
+      POSTGRES_DB: plantstore
+    ports:
+      - "5434:5432"
+    volumes:
+      - plantstore-data:/var/lib/postgresql/data
+
+volumes:
+  plantstore-data:

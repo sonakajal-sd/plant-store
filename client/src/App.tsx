@@ -12,8 +12,7 @@ import Admin from "@/pages/Admin/Admin";
 function App() {
   return (
     <>
-      <Header />
-
+    <Header />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
