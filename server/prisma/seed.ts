@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 
 const products = [
@@ -17,7 +18,23 @@ async function main() {
   // Start clean: delete old products, then add the list again
   await prisma.product.deleteMany();
   await prisma.product.createMany({ data: products });
-  console.log(`Seeded ${products.length} products 🌱`);
+    console.log(`Seeded ${products.length} products 🌱`);
+
+  // Create the admin user (or update it if it already exists)
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin1234";
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+  await prisma.user.upsert({
+    where: { email: "admin@leafandclay.com" },
+    update: { password: hashedPassword, role: "ADMIN" },
+    create: {
+      name: "Store Admin",
+      email: "admin@leafandclay.com",
+      password: hashedPassword,
+      role: "ADMIN",
+    },
+  });
+  console.log("Admin user ready 🔐");
 }
 
 main()
