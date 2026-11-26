@@ -1,27 +1,24 @@
 import "dotenv/config";
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import { prisma } from "./lib/prisma";
+import productRoutes from "./routes/products";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
 
-// Allow our React app to call this server
 app.use(cors({ origin: "http://localhost:5173" }));
-
-// Read JSON from request bodies
 app.use(express.json());
 
-// A simple test route
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", message: "Plant store API is running 🌿" });
 });
 
+app.use("/api/products", productRoutes);
 
-// Get all products from the database
-app.get("/api/products", async (_req, res) => {
-  const products = await prisma.product.findMany({ orderBy: { id: "asc" } });
-  res.json(products);
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: "Something went wrong on the server" });
 });
 
 app.listen(PORT, () => {
