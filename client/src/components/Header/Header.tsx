@@ -1,11 +1,11 @@
 import { Link, NavLink } from "react-router-dom";
-import { useAuth, ADMIN_EMAIL } from "@/context/auth/useAuth";
+import { useAuth } from "@/context/auth/useAuth";
 import { useCart } from "@/context/cart/useCart";
 import styles from "./Header.module.css";
 
 function Header() {
   const { totalCount } = useCart();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   return (
     <header className={styles.header}>
@@ -19,7 +19,7 @@ function Header() {
           <NavLink to="/shop?category=Indoor">Indoor</NavLink>
 <NavLink to="/shop?category=Outdoor">Outdoor</NavLink>
           <NavLink to="/orders">My Orders</NavLink>
-          {user?.email === ADMIN_EMAIL && <NavLink to="/admin">Admin</NavLink>}
+                   {isAdmin && <NavLink to="/admin">Admin</NavLink>}
         </nav>
 
         <div className={styles.actions}>

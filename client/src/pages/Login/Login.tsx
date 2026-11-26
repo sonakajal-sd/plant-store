@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth/useAuth";
+import { loginRequest, registerRequest } from "@/services/authService";
 import styles from "./Login.module.css";
 
 type Mode = "login" | "register";
@@ -39,6 +40,8 @@ function Login() {
   const [form, setForm] = useState<LoginForm>({ name: "", email: "", password: "" });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState(""); // e.g. "Wrong email or password"
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -47,20 +50,34 @@ function Login() {
   function switchMode(newMode: Mode) {
     setMode(newMode);
     setErrors({}); // clear old errors when switching
+    setServerError("");
   }
 
-  function handleSubmit(e: FormEvent) {
+      async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     const newErrors = validate(form, mode);
     setErrors(newErrors);
+    setServerError("");
     if (Object.keys(newErrors).length > 0) return;
 
-    // For now: when logging in, use the part of the email before "@" as the name
-    const name = mode === "register" ? form.name : form.email.split("@")[0];
+    setLoading(true);
+    try {
+      // Ask the server: register or log in
+      const result =
+        mode === "register"
+          ? await registerRequest(form.name, form.email, form.password)
+          : await loginRequest(form.email, form.password);
 
-    login({ name: name, email: form.email });
-    navigate("/"); // go to the Home page
+      login(result.token, result.user);
+
+      // Admin goes to the Admin panel, everyone else to Home
+      navigate(result.user.role === "ADMIN" ? "/admin" : "/");
+    } catch (err) {
+      setServerError((err as Error).message);
+    } finally {
+      setLoading(false); // runs whether it worked or not
+    }
   }
 
   // Already logged in → show account info instead of the form
@@ -166,8 +183,10 @@ function Login() {
             {errors.password && <span className={styles.errorText}>{errors.password}</span>}
           </label>
 
-          <button type="submit" className={styles.submitButton}>
-            {isRegister ? "Create account" : "Log in"}
+            {serverError && <p className={styles.serverError}>{serverError}</p>}
+
+          <button type="submit" className={styles.submitButton} disabled={loading}>
+            {loading ? "Please wait…" : isRegister ? "Create account" : "Log in"}
           </button>
 
           <p className={styles.switchText}>

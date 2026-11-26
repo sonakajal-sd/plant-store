@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { useAuth, ADMIN_EMAIL } from "@/context/auth/useAuth";
+import { useAuth } from "@/context/auth/useAuth";
 import { categories } from "@/data/products";
 import { getOrders, saveOrders } from "@/services/orderService";
 import { createProduct, updateProduct, removeProduct } from "@/services/productService";
@@ -34,7 +34,7 @@ const emptyForm: NewProductForm = {
 const statuses: OrderStatus[] = ["Placed", "Shipped", "Delivered"];
 
 function Admin() {
-  const { user } = useAuth();
+    const { isAdmin } = useAuth();
 
   const [tab, setTab] = useState<Tab>("products");
     // Rename products → productList so the rest of the page doesn't change
@@ -45,7 +45,7 @@ function Admin() {
   const [formError, setFormError] = useState("");
 
   // Only the admin can see this page
-  if (!user || user.email !== ADMIN_EMAIL) {
+    if (!isAdmin) {
     return (
       <div className={styles.blocked}>
         <h1>Admins only 🔒</h1>

@@ -207,3 +207,18 @@
   border-radius: 999px;
   font-weight: 700;
 }
+
+.serverError {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f1e6d6;
+  color: #7a3a22;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

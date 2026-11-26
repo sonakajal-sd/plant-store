@@ -1,12 +1,10 @@
 import { createContext, useContext } from "react";
 import type { User } from "@/types/user";
 
-// The email that counts as the store admin (for now)
-export const ADMIN_EMAIL = "admin@leafandclay.com";
-
 type AuthContextType = {
   user: User | null; // null = nobody logged in
-  login: (user: User) => void;
+  isAdmin: boolean;
+  login: (token: string, user: User) => void;
   logout: () => void;
 };
 

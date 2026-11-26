@@ -1,4 +1,4 @@
-import { API_URL, handleResponse } from "@/services/apiClient";
+import { API_URL, handleResponse, getAuthHeaders } from "@/services/apiClient";
 import type { Product, ProductInput } from "@/types/product";
 
 // GET all products
@@ -11,7 +11,7 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function createProduct(input: ProductInput): Promise<Product> {
   const res = await fetch(`${API_URL}/products`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(input),
   });
   return handleResponse<Product>(res);
@@ -21,7 +21,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
 export async function updateProduct(id: number, input: ProductInput): Promise<Product> {
   const res = await fetch(`${API_URL}/products/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(input),
   });
   return handleResponse<Product>(res);
@@ -29,6 +29,9 @@ export async function updateProduct(id: number, input: ProductInput): Promise<Pr
 
 // DELETE a product
 export async function removeProduct(id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/products/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_URL}/products/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
   await handleResponse(res);
 }

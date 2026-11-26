@@ -9,3 +9,10 @@ export async function handleResponse<T>(res: Response): Promise<T> {
   }
   return data as T;
 }
+
+// The login token as a header, so the server knows who is asking.
+// Gives {} when nobody is logged in.
+export function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
