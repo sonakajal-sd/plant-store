@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/products  (add a new product)
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, requireAdmin, async (req, res) => {
   const error = validateProduct(req.body);
   if (error) {
     res.status(400).json({ error: error });
@@ -78,7 +79,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT /api/products/3  (update a product)
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
 
   const existing = await prisma.product.findUnique({ where: { id: id } });
@@ -111,7 +112,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE /api/products/3
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
 
   const existing = await prisma.product.findUnique({ where: { id: id } });
