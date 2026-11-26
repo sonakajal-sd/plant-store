@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { categories } from "@/data/products";
-import { getProducts } from "@/services/productService";
+import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./Shop.module.css";
 
@@ -10,7 +10,7 @@ type SortOption = "popular" | "price-low" | "price-high";
 
 function Shop() {
 
-  const products= getProducts();
+    const { products, loading, error } = useProducts();
   // Read the category from the URL, e.g. /shop?category=Indoor
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category") ?? "All";
@@ -85,7 +85,9 @@ function Shop() {
         </aside>
 
         {/* Right: product grid */}
-        <div className={styles.grid}>
+                <div className={styles.grid}>
+          {loading && <p>Loading plants… 🌱</p>}
+          {error && <p>{error}</p>}
           {sorted.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

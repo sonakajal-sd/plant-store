@@ -9,3 +9,6 @@ export type Product = {
 };
 
 export type Size = "Small" | "Medium" | "Large";
+
+// The data we send to create/update a product: everything except the id
+export type ProductInput = Omit<Product, "id">;

@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { categories } from "@/data/products";
-import { getProducts } from "@/services/productService";
+import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./Home.module.css";
 
 function Home() {
-    const products= getProducts();
+      const { products, loading, error } = useProducts();
 
   return (
     <div className={styles.page}>
@@ -47,7 +47,9 @@ function Home() {
       {/* 3. Best sellers */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Best sellers</h2>
-        <div className={styles.productGrid}>
+                <div className={styles.productGrid}>
+          {loading && <p>Loading plants… 🌱</p>}
+          {error && <p>{error}</p>}
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

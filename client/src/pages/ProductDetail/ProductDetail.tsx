@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCart } from "@/context/cart/useCart";
 import { sizes, sizeExtraPrice } from "@/data/products";
-import { getProducts } from "@/services/productService";
+import { useProducts } from "@/hooks/useProducts";
 import type { Size } from "@/types/product";
 import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./ProductDetail.module.css";
@@ -18,7 +18,7 @@ function ProductDetail() {
 
 function ProductDetailContent({ id }: { id: string | undefined }) {
   const { addToCart } = useCart();
-  const products = getProducts();
+    const { products, loading } = useProducts();
 
   // 2. Find the product with that id
   const product = products.find((p) => p.id === Number(id));
@@ -31,6 +31,15 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
     window.scrollTo(0, 0);
   }, [id]);
 
+
+  // While loading, don't say "not found" yet
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <p>Loading plant… 🌱</p>
+      </div>
+    );
+  }
   // 3. If no product has this id, show a message
   if (!product) {
     return (

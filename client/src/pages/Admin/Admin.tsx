@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { useAuth, ADMIN_EMAIL } from "@/context/auth/useAuth";
 import { categories } from "@/data/products";
 import { getOrders, saveOrders } from "@/services/orderService";
-import { getProducts, saveProducts } from "@/services/productService";
+import { createProduct, updateProduct, removeProduct } from "@/services/productService";
+import { useProducts } from "@/hooks/useProducts";
 import type { Order, OrderStatus } from "@/types/order";
 import type { Product } from "@/types/product";
 import styles from "./Admin.module.css";
@@ -36,7 +37,8 @@ function Admin() {
   const { user } = useAuth();
 
   const [tab, setTab] = useState<Tab>("products");
-  const [productList, setProductList] = useState<Product[]>(() => getProducts());
+    // Rename products → productList so the rest of the page doesn't change
+  const { products: productList, setProducts: setProductList } = useProducts();
   const [orderList, setOrderList] = useState<Order[]>(() => getOrders());
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NewProductForm>(emptyForm);
@@ -53,25 +55,26 @@ function Admin() {
     );
   }
 
-  // ---------- Products ----------
+    // ---------- Products ----------
 
-  // Update the screen AND save
-  function updateProducts(newList: Product[]) {
-    setProductList(newList);
-    saveProducts(newList);
+  async function changeStock(product: Product, amount: number) {
+    const newStock = Math.max(0, product.stock + amount);
+    try {
+      const updated = await updateProduct(product.id, { ...product, stock: newStock });
+      // Replace the old product with the updated one from the server
+      setProductList(productList.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err) {
+      alert((err as Error).message);
+    }
   }
 
-  function changeStock(id: number, amount: number) {
-    updateProducts(
-      productList.map((p) =>
-        p.id === id ? { ...p, stock: Math.max(0, p.stock + amount) } : p
-      )
-    );
-  }
-
-  function deleteProduct(id: number) {
-    if (window.confirm("Delete this product?")) {
-      updateProducts(productList.filter((p) => p.id !== id));
+  async function deleteProduct(id: number) {
+    if (!window.confirm("Delete this product?")) return;
+    try {
+      await removeProduct(id);
+      setProductList(productList.filter((p) => p.id !== id));
+    } catch (err) {
+      alert((err as Error).message);
     }
   }
 
@@ -79,7 +82,7 @@ function Admin() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleAddProduct(e: FormEvent) {
+  async function handleAddProduct(e: FormEvent) {
     e.preventDefault();
 
     const price = Number(form.price);
@@ -90,23 +93,22 @@ function Admin() {
       return;
     }
 
-    // New id = biggest id + 1
-    const newId = Math.max(0, ...productList.map((p) => p.id)) + 1;
-
-    const newProduct: Product = {
-      id: newId,
-      name: form.name.trim(),
-      category: form.category,
-      price: price,
-      stock: stock,
-      care: form.care.trim() || "Bright light · Water weekly",
-      tag: form.tag.trim() || "New",
-    };
-
-    updateProducts([...productList, newProduct]);
-    setForm(emptyForm);
-    setFormError("");
-    setShowForm(false);
+    try {
+      const newProduct = await createProduct({
+        name: form.name.trim(),
+        category: form.category,
+        price: price,
+        stock: stock,
+        care: form.care.trim() || "Bright light · Water weekly",
+        tag: form.tag.trim() || "New",
+      });
+      setProductList([...productList, newProduct]);
+      setForm(emptyForm);
+      setFormError("");
+      setShowForm(false);
+    } catch (err) {
+      setFormError((err as Error).message);
+    }
   }
 
   // ---------- Orders ----------
@@ -232,11 +234,11 @@ function Admin() {
                       <td>₹ {p.price}</td>
                       <td>
                         <div className={styles.stockControl}>
-                          <button onClick={() => changeStock(p.id, -1)}>−</button>
+                                                   <button onClick={() => changeStock(p, -1)}>−</button>
                           <span className={p.stock === 0 ? styles.red : ""}>
                             {p.stock === 0 ? "Out" : p.stock}
                           </span>
-                          <button onClick={() => changeStock(p.id, 1)}>+</button>
+                                                    <button onClick={() => changeStock(p, 1)}>+</button>
                         </div>
                       </td>
                       <td>
