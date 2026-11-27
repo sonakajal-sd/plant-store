@@ -9,7 +9,8 @@ import orderRoutes from "./routes/orders";
 const app = express();
 const PORT = process.env.PORT ?? 4000;
 
-app.use(cors({ origin: "http://localhost:5173" }));
+// Only our React app may call this API. The address comes from .env (CLIENT_URL).
+app.use(cors({ origin: process.env.CLIENT_URL ?? "http://localhost:5175" }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {

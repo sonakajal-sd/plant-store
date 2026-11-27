@@ -11,4 +11,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    port: 5175,
+    // If 5175 is busy, show an error instead of quietly using another port
+    strictPort: true,
+  },
 })

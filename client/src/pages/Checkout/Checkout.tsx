@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/auth/useAuth";
 import { useCart } from "@/context/cart/useCart";
-import { saveOrder } from "@/services/orderService";
+import { placeOrder } from "@/services/orderService";
+import { formatOrderId } from "@/utils/format";
 import { getItemPrice, getDeliveryFee } from "@/utils/pricing";
 import type { CustomerDetails, Order } from "@/types/order";
 import styles from "./Checkout.module.css";
@@ -61,12 +63,20 @@ function Field({ label, name, value, error, placeholder, onChange }: FieldProps)
 
 // ---- The page ----
 function Checkout() {
+  const { user } = useAuth();
   const { items, subtotal, clearCart } = useCart();
 
-  const [form, setForm] = useState<CustomerDetails>(emptyForm);
+  // Start with the logged-in user's name already filled in
+  const [form, setForm] = useState<CustomerDetails>({
+    ...emptyForm,
+    name: user?.name ?? "",
+  });
   const [errors, setErrors] = useState<FormErrors>({});
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [placing, setPlacing] = useState(false); // true while waiting for the server
+  const [serverError, setServerError] = useState("");
 
+  // Shown in the summary. The server works out the real total.
   const delivery = getDeliveryFee(subtotal);
   const total = subtotal + delivery;
 
@@ -75,7 +85,7 @@ function Checkout() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault(); // stop the page from reloading
 
     const newErrors = validate(form);
@@ -84,18 +94,20 @@ function Checkout() {
     // If there is any error, stop here
     if (Object.keys(newErrors).length > 0) return;
 
-    const order: Order = {
-      id: "LC-" + Date.now().toString().slice(-6),
-      date: new Date().toLocaleDateString("en-IN"),
-      customer: form,
-      items: items,
-      total: total,
-      status: "Placed",
-    };
+    setServerError("");
+    setPlacing(true);
 
-    saveOrder(order);
-    clearCart();
-    setPlacedOrder(order);
+    try {
+      // The server checks stock, works out the prices and saves the order
+      const order = await placeOrder(form, items);
+      clearCart();
+      setPlacedOrder(order);
+    } catch (err) {
+      // e.g. "Sorry, only 4 Peace Lily left in stock" (the cart stays as it is)
+      setServerError((err as Error).message);
+    } finally {
+      setPlacing(false);
+    }
   }
 
   // 1. Success screen (after placing the order)
@@ -106,8 +118,8 @@ function Checkout() {
           <div className={styles.tick}>✓</div>
           <h1>Order placed!</h1>
           <p>
-            Thank you, {placedOrder.customer.name}. Your order{" "}
-            <strong>#{placedOrder.id}</strong> is confirmed. Please keep{" "}
+            Thank you, {placedOrder.customerName}. Your order{" "}
+            <strong>#{formatOrderId(placedOrder.id)}</strong> is confirmed. Please keep{" "}
             <strong>₹ {placedOrder.total}</strong> ready — you pay when your
             plants arrive.
           </p>
@@ -120,7 +132,18 @@ function Checkout() {
     );
   }
 
-  // 2. Empty cart → nothing to check out
+  // 2. Not logged in → ask them to log in (the cart stays saved)
+  if (!user) {
+    return (
+      <div className={styles.page}>
+        <h1 className={styles.title}>Please log in to place your order</h1>
+        <p>Your cart is saved. Log in and come back to check out.</p>
+        <Link to="/login" className={styles.primaryButton}>Go to login</Link>
+      </div>
+    );
+  }
+
+  // 3. Empty cart → nothing to check out
   if (items.length === 0) {
     return (
       <div className={styles.page}>
@@ -130,7 +153,7 @@ function Checkout() {
     );
   }
 
-  // 3. The checkout form
+  // 4. The checkout form
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Checkout</h1>
@@ -199,8 +222,10 @@ function Checkout() {
             <span>₹ {total}</span>
           </div>
 
-          <button type="submit" className={styles.placeButton}>
-            Place order
+          {serverError && <p className={styles.serverError}>{serverError}</p>}
+
+          <button type="submit" className={styles.placeButton} disabled={placing}>
+            {placing ? "Placing order…" : "Place order"}
           </button>
         </aside>
       </form>

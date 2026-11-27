@@ -191,3 +191,17 @@
   border-radius: 999px;
   font-weight: 700;
 }
+/* Error from the server, e.g. "Sorry, only 4 Peace Lily left in stock" */
+.serverError {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fdecea;
+  color: #b3261e;
+  font-size: 14px;
+}
+
+.placeButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

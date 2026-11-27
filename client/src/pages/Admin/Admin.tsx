@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/auth/useAuth";
 import { categories } from "@/data/products";
-import { getOrders, saveOrders } from "@/services/orderService";
+import { fetchAllOrders, updateOrderStatus } from "@/services/orderService";
 import { createProduct, updateProduct, removeProduct } from "@/services/productService";
 import { useProducts } from "@/hooks/useProducts";
+import { formatDate, formatOrderId } from "@/utils/format";
 import type { Order, OrderStatus } from "@/types/order";
 import type { Product } from "@/types/product";
 import styles from "./Admin.module.css";
@@ -39,10 +40,22 @@ function Admin() {
   const [tab, setTab] = useState<Tab>("products");
     // Rename products → productList so the rest of the page doesn't change
   const { products: productList, setProducts: setProductList } = useProducts();
-  const [orderList, setOrderList] = useState<Order[]>(() => getOrders());
+  const [orderList, setOrderList] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NewProductForm>(emptyForm);
   const [formError, setFormError] = useState("");
+
+  // Load all orders from the server (only for the admin).
+  // Hooks must run BEFORE the "Admins only" return below.
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchAllOrders()
+      .then((data) => setOrderList(data))
+      .catch((err: Error) => setOrdersError(err.message))
+      .finally(() => setOrdersLoading(false));
+  }, [isAdmin]);
 
   // Only the admin can see this page
     if (!isAdmin) {
@@ -113,12 +126,17 @@ function Admin() {
 
   // ---------- Orders ----------
 
-  function changeStatus(orderId: string, status: OrderStatus) {
-    const newList = orderList.map((o) =>
-      o.id === orderId ? { ...o, status: status } : o
-    );
-    setOrderList(newList);
-    saveOrders(newList);
+  async function changeStatus(orderId: number, status: OrderStatus) {
+    try {
+      const updated = await updateOrderStatus(orderId, status);
+      // Use the status the server saved. Keep the row's items and user,
+      // because the server doesn't send them back here.
+      setOrderList(
+        orderList.map((o) => (o.id === updated.id ? { ...o, status: updated.status } : o))
+      );
+    } catch (err) {
+      alert((err as Error).message);
+    }
   }
 
   // ---------- Numbers for the top cards ----------
@@ -259,7 +277,11 @@ function Admin() {
           <>
             <h1 className={styles.title}>Orders</h1>
 
-            {orderList.length === 0 ? (
+            {ordersLoading ? (
+              <p>Loading orders…</p>
+            ) : ordersError ? (
+              <p className={styles.error}>{ordersError}</p>
+            ) : orderList.length === 0 ? (
               <p>No orders yet.</p>
             ) : (
               <div className={styles.tableBox}>
@@ -276,9 +298,12 @@ function Admin() {
                   <tbody>
                     {orderList.map((o) => (
                       <tr key={o.id}>
-                        <td><strong>#{o.id}</strong></td>
-                        <td>{o.customer.name}</td>
-                        <td>{o.date}</td>
+                        <td><strong>#{formatOrderId(o.id)}</strong></td>
+                        <td>
+                          {o.user?.name ?? o.customerName}
+                          <span className={styles.email}>{o.user?.email}</span>
+                        </td>
+                        <td>{formatDate(o.createdAt)}</td>
                         <td>₹ {o.total}</td>
                         <td>
                           <div className={styles.statusRow}>
