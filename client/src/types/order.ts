@@ -1,6 +1,10 @@
 import type { Product, Size } from "@/types/product";
 
-export type OrderStatus = "Placed" | "Shipped" | "Delivered";
+export type OrderStatus = "Placed" | "Shipped" | "Delivered" | "Cancelled";
+
+export type PaymentMethod = "COD" | "ONLINE";
+
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 // What the customer types in the checkout form
 export type CustomerDetails = {
@@ -32,8 +36,15 @@ export type Order = {
   city: string;
   state: string;
   pincode: string;
+  // Money in rupees: total = subtotal - discount + deliveryFee
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
   total: number;
+  couponCode: string | null;
   status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   createdAt: string; // a date as text, e.g. "2026-11-26T10:30:00.000Z"
   items: OrderItem[];
   user?: { name: string; email: string }; // only in the admin list

@@ -18,6 +18,24 @@ enum OrderStatus {
   Placed
   Shipped
   Delivered
+  Cancelled
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CouponType {
+  PERCENT // value = percent off, e.g. 10 means 10% off
+  FLAT // value = rupees off, e.g. 100 means ₹100 off
 }
 
 enum Size {
@@ -32,39 +50,63 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
-  password  String   // will be a hashed password, never plain text
+  password  String // will be a hashed password, never plain text
   role      Role     @default(USER)
   createdAt DateTime @default(now())
 
-  orders Order[]
+  orders              Order[]
+  reviews             Review[]
+  wishlistItems       WishlistItem[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Product {
-  id        Int      @id @default(autoincrement())
-  name      String
-  category  String
-  price     Int      // in rupees
-  care      String
-  tag       String
-  stock     Int      @default(0)
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  price       Int // in rupees
+  light       String // one of: "Low light", "Indirect light", "Bright light", "Full sun" (checked by the server)
+  water       String // e.g. "Water weekly"
+  description String   @default("")
+  tag         String
+  stock       Int      @default(0)
+  petSafe     Boolean  @default(false)
+  imageUrl    String? // null = no photo yet (the UI shows 🪴)
+  isActive    Boolean  @default(true) // false = archived: hidden from the shop
+  createdAt   DateTime @default(now())
 
-  orderItems OrderItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
 }
 
 model Order {
-  id           Int         @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   userId       Int
-  user         User        @relation(fields: [userId], references: [id])
+  user         User   @relation(fields: [userId], references: [id])
   customerName String
   phone        String
   address      String
   city         String
   state        String
   pincode      String
-  total        Int
-  status       OrderStatus @default(Placed)
-  createdAt    DateTime    @default(now())
+
+  // Money (all in rupees): total = subtotal - discount + deliveryFee
+  subtotal    Int
+  discount    Int     @default(0)
+  deliveryFee Int
+  total       Int
+  couponCode  String?
+
+  status        OrderStatus   @default(Placed)
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Only used for online payments (Phase 6)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+
+  createdAt DateTime @default(now())
 
   items OrderItem[]
 }
@@ -77,5 +119,54 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   size      Size
   quantity  Int
-  price     Int     // price of ONE item at the time of ordering
+  price     Int // price of ONE item at the time of ordering
+}
+
+model Coupon {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique // always saved in UPPERCASE, e.g. "WELCOME10"
+  type        CouponType
+  value       Int
+  minOrder    Int        @default(0) // subtotal needed to use it
+  maxDiscount Int? // biggest discount for PERCENT coupons (null = no cap)
+  expiresAt   DateTime? // null = never expires
+  isActive    Boolean    @default(true)
+  usageLimit  Int? // how many times it can be used in total (null = no limit)
+  usedCount   Int        @default(0)
+  createdAt   DateTime   @default(now())
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int // 1 to 5 (the database also checks this)
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId]) // one review per customer per product
+}
+
+model WishlistItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId]) // a product can be in a wishlist only once
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique // a HASH of the token, never the token itself
+  expiresAt DateTime
+  usedAt    DateTime? // set when the token is used, so it works only once
+  createdAt DateTime  @default(now())
 }

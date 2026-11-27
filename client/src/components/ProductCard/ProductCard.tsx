@@ -24,7 +24,9 @@ function ProductCard({ product }: ProductCardProps) {
   <Link to={`/product/${product.id}`}>
     <h3 className={styles.name}>{product.name}</h3>
   </Link>
-  <p className={styles.care}>{product.care}</p>
+  <p className={styles.care}>
+    ☀️ {product.light} · 💧 {product.water}
+  </p>
 </div>
       <div className={styles.bottom}>
         <span className={styles.price}>₹ {product.price}</span>

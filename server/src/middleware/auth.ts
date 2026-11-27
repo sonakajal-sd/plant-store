@@ -30,3 +30,16 @@ export function requireAdmin(_req: Request, res: Response, next: NextFunction) {
   }
   next();
 }
+// Guard 3 (not really a guard): read the token IF there is one, but never block.
+// Public routes use it to know when the admin is asking (e.g. to show archived products).
+export function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    try {
+      res.locals.user = verifyToken(header.slice(7));
+    } catch {
+      // A bad or expired token on a public page → just treat them as a guest
+    }
+  }
+  next();
+}

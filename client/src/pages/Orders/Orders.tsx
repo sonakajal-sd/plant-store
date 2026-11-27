@@ -1,47 +1,49 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/context/auth/useAuth";
-import { fetchMyOrders } from "@/services/orderService";
+import { cancelMyOrder, fetchMyOrders } from "@/services/orderService";
 import { formatDate, formatOrderId } from "@/utils/format";
 import type { Order, OrderStatus } from "@/types/order";
 import styles from "./Orders.module.css";
 
+// The tracker steps (a Cancelled order shows a note instead)
 const steps: OrderStatus[] = ["Placed", "Shipped", "Delivered"];
 
 function Orders() {
-  const { user } = useAuth();
-
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Which order is open (null = none)
   const [openId, setOpenId] = useState<number | null>(null);
+  // Which order is being cancelled right now (to disable its button)
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  // Load my orders from the server (again if a different user logs in)
+  // Load my orders from the server when the page opens.
+  // (RequireAuth in App.tsx makes sure someone is logged in.)
   useEffect(() => {
-    if (!user) return; // nobody logged in → nothing to load
     fetchMyOrders()
       .then((data) => setOrders(data))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
   function toggleDetails(id: number) {
     setOpenId(openId === id ? null : id);
   }
 
-  // Not logged in
-  if (!user) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.empty}>
-          <span className={styles.emptyIcon}>🔒</span>
-          <h1>Please log in to see your orders</h1>
-          <Link to="/login" className={styles.primaryButton}>Go to login</Link>
-        </div>
-      </div>
-    );
+  async function handleCancel(order: Order) {
+    if (!window.confirm(`Cancel order #${formatOrderId(order.id)}?`)) return;
+
+    setCancellingId(order.id);
+    try {
+      const updated = await cancelMyOrder(order.id);
+      // Replace the old order with the cancelled one from the server
+      setOrders(orders.map((o) => (o.id === updated.id ? updated : o)));
+    } catch (err) {
+      alert((err as Error).message);
+    } finally {
+      setCancellingId(null);
+    }
   }
 
   // Still waiting for the server
@@ -109,32 +111,49 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Tracker */}
-              <div className={styles.tracker}>
-                {steps.map((step, index) => (
-                  <div key={step} className={styles.step}>
-                    <div
-                      className={
-                        index <= currentStep ? styles.barDone : styles.bar
-                      }
-                    />
-                    <span
-                      className={
-                        index === currentStep ? styles.stepActive : styles.stepLabel
-                      }
-                    >
-                      {step}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {/* Tracker (or a note if the order was cancelled) */}
+              {order.status === "Cancelled" ? (
+                <p className={styles.cancelledNote}>This order was cancelled.</p>
+              ) : (
+                <div className={styles.tracker}>
+                  {steps.map((step, index) => (
+                    <div key={step} className={styles.step}>
+                      <div
+                        className={
+                          index <= currentStep ? styles.barDone : styles.bar
+                        }
+                      />
+                      <span
+                        className={
+                          index === currentStep ? styles.stepActive : styles.stepLabel
+                        }
+                      >
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-              <button
-                className={styles.detailsButton}
-                onClick={() => toggleDetails(order.id)}
-              >
-                {isOpen ? "Hide details" : "View details"}
-              </button>
+              <div className={styles.buttonRow}>
+                <button
+                  className={styles.detailsButton}
+                  onClick={() => toggleDetails(order.id)}
+                >
+                  {isOpen ? "Hide details" : "View details"}
+                </button>
+
+                {/* Only orders that haven't shipped yet can be cancelled */}
+                {order.status === "Placed" && (
+                  <button
+                    className={styles.cancelButton}
+                    onClick={() => handleCancel(order)}
+                    disabled={cancellingId === order.id}
+                  >
+                    {cancellingId === order.id ? "Cancelling…" : "Cancel order"}
+                  </button>
+                )}
+              </div>
 
               {/* Details (only when open) */}
               {isOpen && (

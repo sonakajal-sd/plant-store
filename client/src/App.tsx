@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Header from "@/components/Header/Header";
+import { RequireAuth, RequireAdmin } from "@/components/RouteGuards/RouteGuards";
 import Home from "@/pages/Home/Home";
 import Shop from "@/pages/Shop/Shop";
 import ProductDetail from "@/pages/ProductDetail/ProductDetail";
@@ -12,7 +13,7 @@ import Admin from "@/pages/Admin/Admin";
 function App() {
   return (
     <>
-    <Header />
+      <Header />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -20,9 +21,11 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/checkout" element={<Checkout/>}/>
-          <Route path="/admin" element={<Admin />} />
+          {/* Logged-in users only */}
+          <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
+          <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+          {/* The admin only */}
+          <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
         </Routes>
       </main>
     </>

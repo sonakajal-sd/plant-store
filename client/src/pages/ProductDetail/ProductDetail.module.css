@@ -168,3 +168,8 @@
 .backLink {
   font-weight: 700;
 }
+.description {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--brown-light);
+}

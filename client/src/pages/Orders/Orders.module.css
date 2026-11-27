@@ -63,7 +63,8 @@
 /* Status badges: one class per status */
 .badgePlaced,
 .badgeShipped,
-.badgeDelivered {
+.badgeDelivered,
+.badgeCancelled {
   font-size: 13px;
   font-weight: 700;
   padding: 7px 12px;
@@ -83,6 +84,17 @@
 .badgeDelivered {
   background: var(--olive);
   color: var(--cream);
+}
+
+.badgeCancelled {
+  background: #e4e0db;
+  color: #6b6259;
+}
+
+.cancelledNote {
+  margin: 18px 0;
+  color: var(--brown-light);
+  font-style: italic;
 }
 
 /* Tracker */
@@ -174,4 +186,26 @@
   padding: 15px 26px;
   border-radius: 999px;
   font-weight: 700;
+}
+/* "View details" + "Cancel order" side by side */
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cancelButton {
+  border: 1.5px solid var(--terracotta);
+  background: transparent;
+  color: var(--terracotta);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }

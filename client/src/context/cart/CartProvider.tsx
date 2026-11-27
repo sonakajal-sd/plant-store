@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CartContext } from "@/context/cart/useCart";
+import { fetchProducts } from "@/services/productService";
+import { syncCartItems } from "@/utils/cartSync";
 import { getItemPrice } from "@/utils/pricing";
 import type { CartItem } from "@/types/cart";
 import type { Product, Size } from "@/types/product";
@@ -64,6 +66,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   }
 
+  // Ask the server for the latest data of every product in the cart,
+  // then remove/adjust items and return messages about what changed.
+  async function refreshCart(): Promise<string[]> {
+    if (items.length === 0) return [];
+
+    const ids = [...new Set(items.map((item) => item.product.id))];
+    const latest = await fetchProducts({ ids: ids }); // archived/deleted ones are not returned
+    const latestById = new Map(latest.map((p) => [p.id, p]));
+
+    // Use the newest cart (the user may have clicked "+" while we were waiting)
+    setItems((current) => syncCartItems(current, latestById).items);
+    return syncCartItems(items, latestById).changes;
+  }
+
   // Calculated values
   const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce(
@@ -73,7 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, totalCount, subtotal, addToCart, increase, decrease, removeFromCart, clearCart }}
+      value={{ items, totalCount, subtotal, addToCart, increase, decrease, removeFromCart, clearCart, refreshCart }}
     >
       {children}
     </CartContext.Provider>

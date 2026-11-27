@@ -12,6 +12,8 @@ export type CartContextType = {
   decrease: (id: string) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+  // Gets the latest prices/stock from the server. Returns messages about what changed.
+  refreshCart: () => Promise<string[]>;
 };
 
 export const CartContext = createContext<CartContextType | null>(null);

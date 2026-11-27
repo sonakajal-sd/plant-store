@@ -226,28 +226,117 @@
   font-size: 15px;
 }
 
-/* Not admin */
-.blocked {
-  max-width: 520px;
-  margin: 64px auto;
-  background: var(--card);
-  border-radius: 28px;
-  padding: 48px;
-  text-align: center;
-}
 
-.blocked h1 {
-  margin: 0 0 8px;
-  font-family: var(--font-heading);
-}
-
-.blocked p {
-  margin: 0 0 20px;
-  color: var(--brown-light);
-}
 /* Customer email under the name in the orders table */
 .email {
   display: block;
   font-size: 13px;
   opacity: 0.7;
 }
+
+/* Add product form: checkbox row, full-width description */
+.checkboxLabel {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.form textarea {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--beige);
+  background: var(--cream);
+  font: inherit;
+  color: var(--brown);
+  resize: vertical;
+}
+
+.cancelled {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brown-light);
+}
+
+/* Product form: title, errors under fields, buttons */
+.formTitle {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+}
+
+.fieldError {
+  color: var(--terracotta);
+  font-size: 13px;
+}
+
+.formButtons {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secondaryButton {
+  border: 1.5px solid var(--brown);
+  background: transparent;
+  color: var(--brown);
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* Green message after saving, deleting or archiving */
+.notice {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #e7ecd9;
+  color: var(--olive);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Active / Archived switch above the table */
+.filterRow {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.archivedTag {
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e4e0db;
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rowButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.editButton {
+  border: 1px solid var(--beige);
+  background: transparent;
+  color: var(--brown);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* Every button looks faded while it can't be clicked */
+.main button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

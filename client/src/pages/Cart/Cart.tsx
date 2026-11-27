@@ -1,16 +1,21 @@
 import { Link } from "react-router-dom";
+import CartNotice from "@/components/CartNotice/CartNotice";
 import { useCart } from "@/context/cart/useCart";
+import { useCartRefresh } from "@/hooks/useCartRefresh";
 import { getItemPrice, getDeliveryFee, FREE_DELIVERY_FROM } from "@/utils/pricing";
 import styles from "./Cart.module.css";
 
 function Cart() {
   const { items, totalCount, subtotal, increase, decrease, removeFromCart } =
     useCart();
+  // Check the latest prices and stock when the page opens
+  const refresh = useCartRefresh();
 
-  // Empty cart
+  // Empty cart (maybe because the refresh removed everything)
   if (items.length === 0) {
     return (
       <div className={styles.page}>
+        <CartNotice {...refresh} checking={false} />
         <div className={styles.empty}>
           <span className={styles.emptyIcon}>🌱</span>
           <h1>Your cart is empty</h1>
@@ -29,6 +34,7 @@ function Cart() {
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Your cart</h1>
+      <CartNotice {...refresh} />
 
       <div className={styles.layout}>
         {/* Left: items */}

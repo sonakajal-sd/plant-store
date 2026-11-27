@@ -1,0 +1,33 @@
+.checking {
+  margin: 0 0 16px;
+  color: var(--brown-light);
+  font-size: 14px;
+}
+
+.error,
+.changes {
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 14px;
+}
+
+.error {
+  background: #fdecea;
+  color: #b3261e;
+}
+
+/* Warm yellow: "something changed, please look" */
+.changes {
+  background: #fbf1d9;
+  color: #6b4a12;
+}
+
+.changes ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.changes li + li {
+  margin-top: 4px;
+}

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth/useAuth";
+import type { LoginRedirectState } from "@/components/RouteGuards/RouteGuards";
 import { loginRequest, registerRequest } from "@/services/authService";
 import styles from "./Login.module.css";
 
@@ -35,6 +36,10 @@ function validate(form: LoginForm, mode: Mode): FormErrors {
 function Login() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Where we were sent from (e.g. /checkout) and why (e.g. "session expired")
+  const location = useLocation();
+  const redirect = (location.state ?? {}) as LoginRedirectState;
 
   const [mode, setMode] = useState<Mode>("login");
   const [form, setForm] = useState<LoginForm>({ name: "", email: "", password: "" });
@@ -71,8 +76,10 @@ function Login() {
 
       login(result.token, result.user);
 
-      // Admin goes to the Admin panel, everyone else to Home
-      navigate(result.user.role === "ADMIN" ? "/admin" : "/");
+      // Go back to the page we came from. Otherwise: admin → Admin panel, others → Home.
+      const cameFrom = redirect.from && !redirect.from.startsWith("/login") ? redirect.from : null;
+      const home = result.user.role === "ADMIN" ? "/admin" : "/";
+      navigate(cameFrom ?? home, { replace: true });
     } catch (err) {
       setServerError((err as Error).message);
     } finally {
@@ -133,6 +140,9 @@ function Login() {
             {isRegister ? "Create your account" : "Log in to your account"}
           </h1>
 
+          {/* e.g. "Your session has expired. Please log in again." */}
+          {redirect.message && <p className={styles.notice}>{redirect.message}</p>}
+
           {/* Name: only in register mode */}
           {isRegister && (
             <label className={styles.field}>
@@ -183,7 +193,7 @@ function Login() {
             {errors.password && <span className={styles.errorText}>{errors.password}</span>}
           </label>
 
-            {serverError && <p className={styles.serverError}>{serverError}</p>}
+          {serverError && <p className={styles.serverError}>{serverError}</p>}
 
           <button type="submit" className={styles.submitButton} disabled={loading}>
             {loading ? "Please wait…" : isRegister ? "Create account" : "Log in"}

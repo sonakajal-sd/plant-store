@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import CartNotice from "@/components/CartNotice/CartNotice";
 import { useAuth } from "@/context/auth/useAuth";
 import { useCart } from "@/context/cart/useCart";
+import { useCartRefresh } from "@/hooks/useCartRefresh";
 import { placeOrder } from "@/services/orderService";
 import { formatOrderId } from "@/utils/format";
 import { getItemPrice, getDeliveryFee } from "@/utils/pricing";
@@ -65,6 +67,8 @@ function Field({ label, name, value, error, placeholder, onChange }: FieldProps)
 function Checkout() {
   const { user } = useAuth();
   const { items, subtotal, clearCart } = useCart();
+  // Check the latest prices and stock before the customer pays
+  const refresh = useCartRefresh();
 
   // Start with the logged-in user's name already filled in
   const [form, setForm] = useState<CustomerDetails>({
@@ -132,31 +136,24 @@ function Checkout() {
     );
   }
 
-  // 2. Not logged in → ask them to log in (the cart stays saved)
-  if (!user) {
-    return (
-      <div className={styles.page}>
-        <h1 className={styles.title}>Please log in to place your order</h1>
-        <p>Your cart is saved. Log in and come back to check out.</p>
-        <Link to="/login" className={styles.primaryButton}>Go to login</Link>
-      </div>
-    );
-  }
+  // (Not logged in? RequireAuth in App.tsx already sent them to /login.)
 
-  // 3. Empty cart → nothing to check out
+  // 2. Empty cart → nothing to check out
   if (items.length === 0) {
     return (
       <div className={styles.page}>
+        <CartNotice {...refresh} checking={false} />
         <h1 className={styles.title}>Your cart is empty</h1>
         <Link to="/shop" className={styles.primaryButton}>Shop plants</Link>
       </div>
     );
   }
 
-  // 4. The checkout form
+  // 3. The checkout form
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Checkout</h1>
+      <CartNotice {...refresh} />
 
       <form className={styles.layout} onSubmit={handleSubmit} noValidate>
         {/* Left: address + payment */}
@@ -224,8 +221,13 @@ function Checkout() {
 
           {serverError && <p className={styles.serverError}>{serverError}</p>}
 
-          <button type="submit" className={styles.placeButton} disabled={placing}>
-            {placing ? "Placing order…" : "Place order"}
+          {/* Wait until the cart is checked, so we never order old prices */}
+          <button
+            type="submit"
+            className={styles.placeButton}
+            disabled={placing || refresh.checking}
+          >
+            {placing ? "Placing order…" : refresh.checking ? "Checking cart…" : "Place order"}
           </button>
         </aside>
       </form>

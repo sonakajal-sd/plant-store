@@ -1,0 +1,29 @@
+/* "Admins only" box */
+.blocked {
+  max-width: 520px;
+  margin: 64px auto;
+  background: var(--card);
+  border-radius: 28px;
+  padding: 48px;
+  text-align: center;
+}
+
+.blocked h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+}
+
+.blocked p {
+  margin: 0 0 20px;
+  color: var(--brown-light);
+}
+
+.primaryButton {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}

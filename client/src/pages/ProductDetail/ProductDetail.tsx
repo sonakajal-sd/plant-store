@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCart } from "@/context/cart/useCart";
 import { sizes, sizeExtraPrice } from "@/data/products";
-import { useProducts } from "@/hooks/useProducts";
+import { useProduct } from "@/hooks/useProduct";
 import type { Size } from "@/types/product";
 import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./ProductDetail.module.css";
@@ -18,10 +18,9 @@ function ProductDetail() {
 
 function ProductDetailContent({ id }: { id: string | undefined }) {
   const { addToCart } = useCart();
-    const { products, loading } = useProducts();
 
-  // 2. Find the product with that id
-  const product = products.find((p) => p.id === Number(id));
+  // 2. Ask the server for this ONE product (and a few related ones)
+  const { product, related, loading, notFound, error } = useProduct(Number(id));
 
   const [size, setSize] = useState<Size>("Small");
   const [quantity, setQuantity] = useState(1);
@@ -31,7 +30,6 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
     window.scrollTo(0, 0);
   }, [id]);
 
-
   // While loading, don't say "not found" yet
   if (loading) {
     return (
@@ -40,8 +38,19 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
       </div>
     );
   }
-  // 3. If no product has this id, show a message
-  if (!product) {
+  // 3. Something went wrong (e.g. the server is down)
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <h1>Something went wrong 🥀</h1>
+        <p>{error}</p>
+        <Link to="/shop" className={styles.backLink}>← Back to shop</Link>
+      </div>
+    );
+  }
+
+  // 4. No product with this id (or it was archived)
+  if (notFound || !product) {
     return (
       <div className={styles.page}>
         <h1>Plant not found 🥀</h1>
@@ -52,14 +61,6 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
 
   const isOutOfStock = product.stock === 0;
   const price = product.price + sizeExtraPrice[size];
-
-  // "Low light · Water weekly" → ["Low light", "Water weekly"]
-  const [light, water] = product.care.split(" · ");
-
-  // Other plants in the same category (not this one), max 4
-  const related = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
 
   function increase() {
     if (quantity < product!.stock) {
@@ -96,9 +97,16 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
           <h1 className={styles.title}>{product.name}</h1>
           <p className={styles.price}>₹ {price}</p>
 
+          {product.description && (
+            <p className={styles.description}>{product.description}</p>
+          )}
+
           <div className={styles.careGrid}>
-            <div className={styles.careBox}>☀️ {light}</div>
-            <div className={styles.careBox}>💧 {water}</div>
+            <div className={styles.careBox}>☀️ {product.light}</div>
+            <div className={styles.careBox}>💧 {product.water}</div>
+            {product.petSafe && (
+              <div className={styles.careBox}>🐾 Safe for cats and dogs</div>
+            )}
           </div>
 
           {/* Size buttons */}

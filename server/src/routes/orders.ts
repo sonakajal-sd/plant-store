@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import type { OrderStatus } from "../generated/prisma/client";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { SIZES, sizeExtraPrice, getDeliveryFee } from "../utils/pricing";
 import type { SizeName } from "../utils/pricing";
@@ -24,7 +25,13 @@ type OrderItemInput = {
   quantity: number;
 };
 
-const STATUSES = ["Placed", "Shipped", "Delivered"];
+const STATUSES = ["Placed", "Shipped", "Delivered", "Cancelled"];
+
+// What we send back with every order: its items with their product
+const withItems = { items: { include: { product: true } } };
+
+// The admin list also shows who ordered (name + email only, never the password!)
+const withItemsAndUser = { ...withItems, user: { select: { name: true, email: true } } };
 
 // Our own error type, for problems we want to show to the customer
 class OrderError extends Error {}
@@ -65,6 +72,34 @@ function validateItems(items: unknown): string | null {
   return null;
 }
 
+// ---------- Cancelling ----------
+
+// Cancels an order AND puts its stock back — all or nothing.
+// It only cancels if the order is still in one of `allowedStatuses`
+// (checked inside the transaction, so two clicks can't add the stock back twice).
+async function cancelAndRestock(orderId: number, allowedStatuses: OrderStatus[]) {
+  return prisma.$transaction(async (tx) => {
+    const changed = await tx.order.updateMany({
+      where: { id: orderId, status: { in: allowedStatuses } },
+      data: { status: "Cancelled" },
+    });
+    if (changed.count === 0) {
+      throw new OrderError("This order can't be cancelled any more");
+    }
+
+    // Put every item back on the shelf
+    const items = await tx.orderItem.findMany({ where: { orderId: orderId } });
+    for (const item of items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    return tx.order.findUniqueOrThrow({ where: { id: orderId }, include: withItemsAndUser });
+  });
+}
+
 // ---------- Routes ----------
 
 // POST /api/orders  (place an order — must be logged in)
@@ -91,6 +126,10 @@ router.post("/", requireAuth, async (req, res) => {
         if (!product) {
           throw new OrderError("A plant in your cart no longer exists");
         }
+        // Archived products can't be ordered any more
+        if (!product.isActive) {
+          throw new OrderError(`${product.name} is no longer available. Please remove it from your cart.`);
+        }
 
         // Reduce stock ONLY if there is enough
         // (safe even if two people order the last plant at the same time)
@@ -114,7 +153,8 @@ router.post("/", requireAuth, async (req, res) => {
         });
       }
 
-      const total = subtotal + getDeliveryFee(subtotal);
+      const deliveryFee = getDeliveryFee(subtotal);
+      const total = subtotal + deliveryFee;
 
       // Create the order AND its items in one go
       return tx.order.create({
@@ -126,10 +166,12 @@ router.post("/", requireAuth, async (req, res) => {
           city: customer.city.trim(),
           state: customer.state.trim(),
           pincode: customer.pincode,
+          subtotal: subtotal,
+          deliveryFee: deliveryFee,
           total: total,
           items: { create: orderItems },
         },
-        include: { items: { include: { product: true } } },
+        include: withItems,
       });
     });
 
@@ -148,7 +190,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/my", requireAuth, async (_req, res) => {
   const orders = await prisma.order.findMany({
     where: { userId: res.locals.user.userId },
-    include: { items: { include: { product: true } } },
+    include: withItems,
     orderBy: { createdAt: "desc" },
   });
   res.json(orders);
@@ -157,13 +199,41 @@ router.get("/my", requireAuth, async (_req, res) => {
 // GET /api/orders  (ALL orders — admin only)
 router.get("/", requireAuth, requireAdmin, async (_req, res) => {
   const orders = await prisma.order.findMany({
-    include: {
-      items: { include: { product: true } },
-      user: { select: { name: true, email: true } }, // never send the password!
-    },
+    include: withItemsAndUser,
     orderBy: { createdAt: "desc" },
   });
   res.json(orders);
+});
+
+// PATCH /api/orders/5/cancel  (a customer cancels their OWN order, only while it's Placed)
+router.patch("/:id/cancel", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid order id" });
+    return;
+  }
+
+  const existing = await prisma.order.findUnique({ where: { id: id } });
+  // Someone else's order → say "not found" (don't reveal that it exists)
+  if (!existing || existing.userId !== res.locals.user.userId) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (existing.status !== "Placed") {
+    res.status(400).json({ error: `This order is ${existing.status}, so it can't be cancelled` });
+    return;
+  }
+
+  try {
+    const order = await cancelAndRestock(id, ["Placed"]);
+    res.json(order);
+  } catch (err) {
+    if (err instanceof OrderError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 });
 
 // PATCH /api/orders/5/status  (change status — admin only)
@@ -177,7 +247,7 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
   }
 
   if (!STATUSES.includes(status)) {
-    res.status(400).json({ error: "Status must be Placed, Shipped or Delivered" });
+    res.status(400).json({ error: "Status must be Placed, Shipped, Delivered or Cancelled" });
     return;
   }
 
@@ -187,9 +257,35 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
     return;
   }
 
+  // Re-opening a cancelled order would need its stock taken out again, so it's final
+  if (existing.status === "Cancelled") {
+    res.status(400).json({ error: "A cancelled order can't be changed" });
+    return;
+  }
+
+  // Cancelling puts the stock back. A delivered order can't be cancelled.
+  if (status === "Cancelled") {
+    if (existing.status === "Delivered") {
+      res.status(400).json({ error: "A delivered order can't be cancelled" });
+      return;
+    }
+    try {
+      const order = await cancelAndRestock(id, ["Placed", "Shipped"]);
+      res.json(order);
+    } catch (err) {
+      if (err instanceof OrderError) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
   const order = await prisma.order.update({
     where: { id: id },
     data: { status: status },
+    include: withItemsAndUser,
   });
   res.json(order);
 });

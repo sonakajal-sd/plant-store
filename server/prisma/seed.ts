@@ -1,40 +1,39 @@
+// SAFE seed — fine to run on the live database, any number of times.
+// It never deletes anything:
+//   1. creates (or updates) the admin user
+//   2. adds the starter products ONLY if there are no products yet
+// Run with:  npm run seed   (or  npx prisma db seed)
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { starterProducts } from "./starterProducts";
 
-const products = [
-  { name: "Snake Plant", category: "Indoor", price: 349, care: "Low light · Water every 2 weeks", tag: "Beginner friendly", stock: 24 },
-  { name: "Money Plant", category: "Indoor", price: 199, care: "Indirect light · Water weekly", tag: "Best seller", stock: 40 },
-  { name: "Peace Lily", category: "Flowering", price: 449, care: "Shade · Keep soil moist", tag: "Flowering", stock: 6 },
-  { name: "Aloe Vera", category: "Succulents", price: 249, care: "Bright light · Water rarely", tag: "Low water", stock: 18 },
-  { name: "Hibiscus", category: "Outdoor", price: 299, care: "Full sun · Water daily", tag: "Outdoor", stock: 0 },
-  { name: "Jade Plant", category: "Succulents", price: 279, care: "Bright light · Water rarely", tag: "Lucky plant", stock: 12 },
-  { name: "Areca Palm", category: "Indoor", price: 649, care: "Indirect light · Water twice a week", tag: "Air purifier", stock: 8 },
-  { name: "Tulsi", category: "Outdoor", price: 149, care: "Full sun · Water daily", tag: "Outdoor", stock: 30 },
-  { name: "Terracotta Pot", category: "Pots & Planters", price: 179, care: "8 inch · Handmade clay", tag: "Handmade", stock: 32 },
-];
+const ADMIN_EMAIL = "admin@leafandclay.com";
 
 async function main() {
-  // Start clean: delete old products, then add the list again
-  await prisma.product.deleteMany();
-  await prisma.product.createMany({ data: products });
-    console.log(`Seeded ${products.length} products 🌱`);
-
-  // Create the admin user (or update it if it already exists)
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin1234";
+  // 1. Admin user. The password must come from .env (never hard-code it).
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 8) {
+    throw new Error("Set ADMIN_PASSWORD in server/.env (at least 8 characters) before seeding.");
+  }
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
+  // upsert = update it if it exists, otherwise create it
   await prisma.user.upsert({
-    where: { email: "admin@leafandclay.com" },
+    where: { email: ADMIN_EMAIL },
     update: { password: hashedPassword, role: "ADMIN" },
-    create: {
-      name: "Store Admin",
-      email: "admin@leafandclay.com",
-      password: hashedPassword,
-      role: "ADMIN",
-    },
+    create: { name: "Store Admin", email: ADMIN_EMAIL, password: hashedPassword, role: "ADMIN" },
   });
-  console.log("Admin user ready 🔐");
+  console.log(`Admin user ready: ${ADMIN_EMAIL} 🔐`);
+
+  // 2. Starter products, only for an empty shop (so we never create duplicates)
+  const productCount = await prisma.product.count();
+  if (productCount === 0) {
+    await prisma.product.createMany({ data: starterProducts });
+    console.log(`Added ${starterProducts.length} starter products 🌱`);
+  } else {
+    console.log(`Shop already has ${productCount} products, so none were added.`);
+  }
 }
 
 main()

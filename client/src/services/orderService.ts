@@ -31,16 +31,21 @@ export async function fetchAllOrders(): Promise<Order[]> {
   return handleResponse<Order[]>(res);
 }
 
-// PATCH an order's status (admin only).
-// The server sends back the order WITHOUT its items and user.
-export async function updateOrderStatus(
-  id: number,
-  status: OrderStatus
-): Promise<Omit<Order, "items" | "user">> {
+// PATCH an order's status (admin only). "Cancelled" also puts the stock back.
+export async function updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
   const res = await fetch(`${API_URL}/orders/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({ status }),
   });
-  return handleResponse<Omit<Order, "items" | "user">>(res);
+  return handleResponse<Order>(res);
+}
+
+// PATCH: the customer cancels their own order (only while it is "Placed")
+export async function cancelMyOrder(id: number): Promise<Order> {
+  const res = await fetch(`${API_URL}/orders/${id}/cancel`, {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+  });
+  return handleResponse<Order>(res);
 }

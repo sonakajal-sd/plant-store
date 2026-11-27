@@ -222,3 +222,13 @@
   opacity: 0.6;
   cursor: wait;
 }
+/* Info message, e.g. "Your session has expired" */
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #e7ecd9;
+  color: var(--olive);
+  font-size: 14px;
+  font-weight: 500;
+}

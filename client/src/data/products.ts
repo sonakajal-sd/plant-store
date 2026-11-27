@@ -1,4 +1,4 @@
-import type { Size } from "@/types/product";
+import type { LightLevel, Size } from "@/types/product";
 
 export const categories: string[] = [
   "Indoor",
@@ -7,6 +7,8 @@ export const categories: string[] = [
   "Flowering",
   "Pots & Planters",
 ];
+
+export const lightOptions: LightLevel[] = ["Low light", "Indirect light", "Bright light", "Full sun"];
 
 export const sizes: Size[] = ["Small", "Medium", "Large"];
 
