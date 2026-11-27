@@ -2,14 +2,19 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelMyOrder, fetchMyOrders } from "@/services/orderService";
 import { formatDate, formatOrderId } from "@/utils/format";
+import Pagination from "@/components/Pagination/Pagination";
 import type { Order, OrderStatus } from "@/types/order";
 import styles from "./Orders.module.css";
 
 // The tracker steps (a Cancelled order shows a note instead)
 const steps: OrderStatus[] = ["Placed", "Shipped", "Delivered"];
 
+const PAGE_SIZE = 10;
+
 function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [total, setTotal] = useState(0); // all my orders (all pages)
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,14 +23,32 @@ function Orders() {
   // Which order is being cancelled right now (to disable its button)
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  // Load my orders from the server when the page opens.
+  // Load one page of my orders (again when the page number changes).
   // (RequireAuth in App.tsx makes sure someone is logged in.)
   useEffect(() => {
-    fetchMyOrders()
-      .then((data) => setOrders(data))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+    let ignore = false;
+    fetchMyOrders(page, PAGE_SIZE)
+      .then((data) => {
+        if (ignore) return;
+        setOrders(data.items);
+        setTotal(data.total);
+      })
+      .catch((err: Error) => {
+        if (!ignore) setError(err.message);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [page]);
+
+  function goToPage(newPage: number) {
+    setPage(newPage);
+    setOpenId(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function toggleDetails(id: number) {
     setOpenId(openId === id ? null : id);
@@ -167,6 +190,19 @@ function Orders() {
                       <strong>₹ {item.price * item.quantity}</strong>
                     </div>
                   ))}
+
+                  {/* Money breakdown, exactly as the server saved it */}
+                  {order.discount > 0 && (
+                    <div className={styles.line}>
+                      <span>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</span>
+                      <strong>− ₹ {order.discount}</strong>
+                    </div>
+                  )}
+                  <div className={styles.line}>
+                    <span>Delivery</span>
+                    <strong>{order.deliveryFee === 0 ? "Free" : `₹ ${order.deliveryFee}`}</strong>
+                  </div>
+
                   <p className={styles.muted}>
                     Delivery to: {order.customerName}, {order.address},{" "}
                     {order.city}, {order.state} – {order.pincode}
@@ -178,6 +214,8 @@ function Orders() {
           );
         })}
       </div>
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={goToPage} />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import cors from "cors";
 import productRoutes from "./routes/products";
 import authRoutes from "./routes/auth";
 import orderRoutes from "./routes/orders";
+import couponRoutes from "./routes/coupons";
+import wishlistRoutes from "./routes/wishlist";
+import reviewRoutes from "./routes/reviews";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -17,9 +20,13 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", message: "Plant store API is running 🌿" });
 });
 
+// Reviews first: "/api/products/3/reviews" must not be caught by the products router
+app.use("/api/products/:id/reviews", reviewRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);

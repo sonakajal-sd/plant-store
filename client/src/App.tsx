@@ -9,6 +9,8 @@ import Login from "@/pages/Login/Login";
 import Orders from "@/pages/Orders/Orders";
 import Checkout from "@/pages/Checkout/Checkout";
 import Admin from "@/pages/Admin/Admin";
+import Wishlist from "@/pages/Wishlist/Wishlist";
+import Account from "@/pages/Account/Account";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
           {/* Logged-in users only */}
           <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
           <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+          <Route path="/wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />
+          <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
           {/* The admin only */}
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
         </Routes>

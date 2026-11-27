@@ -2,11 +2,12 @@ import { Link } from "react-router-dom";
 import CartNotice from "@/components/CartNotice/CartNotice";
 import { useCart } from "@/context/cart/useCart";
 import { useCartRefresh } from "@/hooks/useCartRefresh";
-import { getItemPrice, getDeliveryFee, FREE_DELIVERY_FROM } from "@/utils/pricing";
+import { getItemPrice, getOrderTotals, FREE_DELIVERY_FROM } from "@/utils/pricing";
+import CouponBox from "./CouponBox";
 import styles from "./Cart.module.css";
 
 function Cart() {
-  const { items, totalCount, subtotal, increase, decrease, removeFromCart } =
+  const { items, totalCount, subtotal, discount, coupon, increase, decrease, removeFromCart } =
     useCart();
   // Check the latest prices and stock when the page opens
   const refresh = useCartRefresh();
@@ -28,8 +29,9 @@ function Cart() {
     );
   }
 
-  const delivery = getDeliveryFee(subtotal);
-  const total = subtotal + delivery;
+  // Delivery is worked out AFTER the discount (same rule as the server)
+  const { deliveryFee: delivery, total } = getOrderTotals(subtotal, discount);
+  const afterDiscount = subtotal - discount;
 
   return (
     <div className={styles.page}>
@@ -84,6 +86,13 @@ function Cart() {
             <strong>₹ {subtotal}</strong>
           </div>
 
+          {discount > 0 && coupon && (
+            <div className={styles.row}>
+              <span>Discount ({coupon.code})</span>
+              <strong className={styles.discount}>− ₹ {discount}</strong>
+            </div>
+          )}
+
           <div className={styles.row}>
             <span>Delivery</span>
             <strong>{delivery === 0 ? "Free" : `₹ ${delivery}`}</strong>
@@ -92,8 +101,10 @@ function Cart() {
           <p className={styles.deliveryNote}>
             {delivery === 0
               ? "You get free delivery on this order 🎉"
-              : `Add ₹ ${FREE_DELIVERY_FROM - subtotal} more for free delivery`}
+              : `Add ₹ ${FREE_DELIVERY_FROM - afterDiscount} more for free delivery`}
           </p>
+
+          <CouponBox />
 
           <div className={styles.totalRow}>
             <span>Total</span>

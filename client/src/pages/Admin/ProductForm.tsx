@@ -51,10 +51,12 @@ function isWholeNumber(text: string): boolean {
 function validate(values: FormValues): FormErrors {
   const errors: FormErrors = {};
   if (values.name.trim() === "") errors.name = "Please enter a name";
-  if (!isWholeNumber(values.price) || Number(values.price) <= 0) {
-    errors.price = "Enter a whole number above 0";
+  if (!isWholeNumber(values.price) || Number(values.price) < 1 || Number(values.price) > 1_000_000) {
+    errors.price = "A whole number from 1 to 10,00,000";
   }
-  if (!isWholeNumber(values.stock)) errors.stock = "Enter a whole number, 0 or more";
+  if (!isWholeNumber(values.stock) || Number(values.stock) > 100_000) {
+    errors.stock = "A whole number from 0 to 1,00,000";
+  }
   if (values.water.trim() === "") errors.water = "e.g. Water weekly";
   return errors;
 }

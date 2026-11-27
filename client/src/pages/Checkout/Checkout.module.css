@@ -205,3 +205,10 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* "Add ₹99 more to use WELCOME10" */
+.couponNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--terracotta);
+}

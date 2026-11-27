@@ -6,6 +6,7 @@ type AuthContextType = {
   isAdmin: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (user: User) => void; // e.g. after changing the name on the Account page
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);

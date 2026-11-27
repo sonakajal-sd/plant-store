@@ -1,26 +1,38 @@
 import { API_URL, handleResponse, getAuthHeaders } from "@/services/apiClient";
-import type { Product, ProductInput } from "@/types/product";
+import type { Paged } from "@/types/api";
+import type { Product, ProductInput, ProductQuery, ProductStats } from "@/types/product";
 
-// Optional filters for the product list
-type ProductListOptions = {
-  category?: string;
-  ids?: number[]; // only these products (used to refresh the cart)
-  includeArchived?: boolean; // admin only: also show archived products
-};
-
-// GET products (only active ones, unless the admin asks for archived too)
-export async function fetchProducts(options: ProductListOptions = {}): Promise<Product[]> {
-  // Turn the options into "?category=Indoor&ids=1,2"
+// Turns a query object into "?search=fern&page=2". Empty values are left out.
+function toSearchParams(query: ProductQuery): string {
   const params = new URLSearchParams();
-  if (options.category) params.set("category", options.category);
-  if (options.ids) params.set("ids", options.ids.join(","));
-  if (options.includeArchived) params.set("includeArchived", "true");
+  if (query.search) params.set("search", query.search);
+  if (query.category) params.set("category", query.category);
+  if (query.minPrice !== undefined) params.set("minPrice", String(query.minPrice));
+  if (query.maxPrice !== undefined) params.set("maxPrice", String(query.maxPrice));
+  if (query.light) params.set("light", query.light);
+  if (query.petSafe) params.set("petSafe", "true");
+  if (query.inStock) params.set("inStock", "true");
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page) params.set("page", String(query.page));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+  if (query.ids) params.set("ids", query.ids.join(","));
+  if (query.archived) params.set("archived", "true");
+  return params.toString();
+}
 
+// GET one page of products (only active ones, unless the admin asks for archived)
+export async function fetchProducts(query: ProductQuery = {}): Promise<Paged<Product>> {
   // Send the token too, so the server knows when the admin is asking
-  const res = await fetch(`${API_URL}/products?${params.toString()}`, {
+  const res = await fetch(`${API_URL}/products?${toSearchParams(query)}`, {
     headers: getAuthHeaders(),
   });
-  return handleResponse<Product[]>(res);
+  return handleResponse<Paged<Product>>(res);
+}
+
+// GET the numbers for the admin's top cards
+export async function fetchProductStats(): Promise<ProductStats> {
+  const res = await fetch(`${API_URL}/products/stats`, { headers: getAuthHeaders() });
+  return handleResponse<ProductStats>(res);
 }
 
 // GET one product (404 if it doesn't exist or is archived)

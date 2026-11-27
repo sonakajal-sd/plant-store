@@ -5,7 +5,8 @@ import ProductCard from "@/components/ProductCard/ProductCard";
 import styles from "./Home.module.css";
 
 function Home() {
-      const { products, loading, error } = useProducts();
+  // The 8 most-ordered plants
+  const { products, loading, error } = useProducts({ sort: "popular", pageSize: 8 });
 
   return (
     <div className={styles.page}>
@@ -47,7 +48,7 @@ function Home() {
       {/* 3. Best sellers */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Best sellers</h2>
-                <div className={styles.productGrid}>
+        <div className={styles.productGrid}>
           {loading && <p>Loading plants… 🌱</p>}
           {error && <p>{error}</p>}
           {products.map((product) => (

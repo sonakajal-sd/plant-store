@@ -1,6 +1,7 @@
 .header {
   position: sticky;
   top: 0;
+  z-index: 10; /* stay above the page while scrolling */
   background: var(--cream);
   border-bottom: 1px solid var(--beige);
 }
@@ -37,14 +38,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.search {
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--beige);
-  background: var(--card);
-  font: inherit;
 }
 
 .iconButton,

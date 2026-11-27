@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCart } from "@/context/cart/useCart";
-import { sizes, sizeExtraPrice } from "@/data/products";
+import { MAX_QUANTITY_PER_ITEM, sizes, sizeExtraPrice } from "@/data/products";
 import { useProduct } from "@/hooks/useProduct";
 import type { Size } from "@/types/product";
 import ProductCard from "@/components/ProductCard/ProductCard";
+import HeartButton from "@/components/HeartButton/HeartButton";
+import Stars from "@/components/Stars/Stars";
+import ReviewsSection from "./ReviewsSection";
 import styles from "./ProductDetail.module.css";
 
 function ProductDetail() {
@@ -24,6 +27,7 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
 
   const [size, setSize] = useState<Size>("Small");
   const [quantity, setQuantity] = useState(1);
+  const [cartMessage, setCartMessage] = useState(""); // e.g. "Added 2 to your cart"
 
   // When we open a different plant: go to top
   useEffect(() => {
@@ -63,7 +67,8 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
   const price = product.price + sizeExtraPrice[size];
 
   function increase() {
-    if (quantity < product!.stock) {
+    // Not more than in stock, and not more than 20 per order line
+    if (quantity < product!.stock && quantity < MAX_QUANTITY_PER_ITEM) {
       setQuantity(quantity + 1);
     }
   }
@@ -94,7 +99,11 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
             {isOutOfStock ? "Out of stock" : `${product.tag} · In stock`}
           </span>
 
-          <h1 className={styles.title}>{product.name}</h1>
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>{product.name}</h1>
+            <HeartButton productId={product.id} />
+          </div>
+          <Stars rating={product.ratingAverage} count={product.ratingCount} />
           <p className={styles.price}>₹ {price}</p>
 
           {product.description && (
@@ -135,18 +144,31 @@ function ProductDetailContent({ id }: { id: string | undefined }) {
 
             <button
               className={styles.addButton}
-             onClick={() => addToCart(product, size, quantity)}
+              onClick={() => {
+                const added = addToCart(product, size, quantity);
+                if (added === quantity) {
+                  setCartMessage(`Added ${added} to your cart ✓`);
+                } else if (added > 0) {
+                  setCartMessage(`Only ${added} more could be added — the rest of the stock is already in your cart.`);
+                } else {
+                  setCartMessage(`All ${product.stock} in stock are already in your cart.`);
+                }
+              }}
               disabled={isOutOfStock}
             >
               {isOutOfStock ? "Sold out" : "Add to cart"}
             </button>
           </div>
 
+          {cartMessage && <p className={styles.cartMessage}>{cartMessage}</p>}
+
           <p className={styles.note}>
             Free delivery above ₹ 999 · Cash on delivery available
           </p>
         </div>
       </div>
+
+      <ReviewsSection productId={product.id} />
 
       {/* Related products */}
       {related.length > 0 && (

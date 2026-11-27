@@ -17,8 +17,8 @@ export function useProduct(id: number) {
         setProduct(data);
 
         // Related products are a bonus: if they fail, the page still works
-        fetchProducts({ category: data.category })
-          .then((list) => setRelated(list.filter((p) => p.id !== data.id).slice(0, 4)))
+        fetchProducts({ category: data.category, sort: "popular", pageSize: 5 })
+          .then((page) => setRelated(page.items.filter((p) => p.id !== data.id).slice(0, 4)))
           .catch(() => setRelated([]));
       })
       .catch((err: Error) => {

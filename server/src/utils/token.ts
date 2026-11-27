@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 // What we store inside the token
 export type TokenPayload = {
   userId: number;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN"; // only informative: the server always reads the role from the database
+  tokenVersion: number; // must match the user's tokenVersion, or the token is refused
 };
 
 function getSecret(): string {

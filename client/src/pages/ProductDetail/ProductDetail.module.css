@@ -173,3 +173,124 @@
   line-height: 1.6;
   color: var(--brown-light);
 }
+
+/* Name + heart side by side */
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* ---------- Reviews ---------- */
+.reviews {
+  margin: 48px 0;
+}
+
+.reviewsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.reviewHint {
+  color: var(--brown-light);
+}
+
+.reviewHint a {
+  color: var(--terracotta);
+  font-weight: 700;
+}
+
+.reviewList {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.review {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.reviewTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.reviewDate {
+  font-size: 13px;
+  color: var(--brown-light);
+}
+
+.reviewText {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.reviewForm {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 20px;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.reviewForm textarea {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--beige);
+  background: var(--cream);
+  font: inherit;
+  resize: vertical;
+}
+
+.reviewForm .addButton {
+  align-self: flex-start;
+}
+
+.starPicker {
+  display: flex;
+  gap: 4px;
+}
+
+.starOn,
+.starOff {
+  border: 0;
+  background: none;
+  font-size: 30px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.starOn {
+  color: #d4a017;
+}
+
+.starOff {
+  color: var(--beige);
+}
+
+.reviewError {
+  margin: 0;
+  color: var(--terracotta);
+  font-size: 14px;
+}
+
+/* "Added 2 to your cart ✓" under the buy button */
+.cartMessage {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--olive);
+}

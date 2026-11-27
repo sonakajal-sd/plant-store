@@ -1,4 +1,4 @@
-import { sizeExtraPrice } from "@/data/products";
+import { MAX_QUANTITY_PER_ITEM, sizeExtraPrice } from "@/data/products";
 import type { CartItem } from "@/types/cart";
 import type { Product } from "@/types/product";
 
@@ -27,14 +27,26 @@ export function syncCartItems(
 
     const free = stockLeft.get(latest.id) ?? latest.stock;
 
-    // 2. Nothing left
+    // 2. Nothing left (sold out, or the other sizes in the cart already use all of it)
     if (free === 0) {
-      changes.add(`${latest.name} (${item.size}) is sold out, so it was removed from your cart.`);
+      if (latest.stock === 0) {
+        changes.add(`${latest.name} (${item.size}) is sold out, so it was removed from your cart.`);
+      } else {
+        changes.add(
+          `Only ${latest.stock} ${latest.name} in stock, and they're already in your cart in another size, so the ${item.size} was removed.`
+        );
+      }
       continue;
     }
 
-    // 3. Fewer left than in the cart → lower the quantity
+    // 3. Fewer left than in the cart → lower the quantity (and never more than 20 per line)
     let quantity = item.quantity;
+    if (quantity > MAX_QUANTITY_PER_ITEM) {
+      quantity = MAX_QUANTITY_PER_ITEM;
+      changes.add(
+        `You can order at most ${MAX_QUANTITY_PER_ITEM} ${latest.name} (${item.size}) at once, so it was changed to ${MAX_QUANTITY_PER_ITEM}.`
+      );
+    }
     if (quantity > free) {
       quantity = free;
       changes.add(

@@ -1,9 +1,16 @@
 import { useState } from "react";
+import AdminCoupons from "./AdminCoupons";
 import AdminOrders from "./AdminOrders";
 import AdminProducts from "./AdminProducts";
 import styles from "./Admin.module.css";
 
-type Tab = "products" | "orders";
+type Tab = "products" | "orders" | "coupons";
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: "products", label: "Products" },
+  { id: "orders", label: "Orders" },
+  { id: "coupons", label: "Coupons" },
+];
 
 // The admin page: a sidebar with tabs, and the chosen tab on the right.
 // (RequireAdmin in App.tsx makes sure only the admin gets here.)
@@ -14,22 +21,21 @@ function Admin() {
     <div className={styles.layout}>
       <aside className={styles.sidebar}>
         <p className={styles.sidebarTitle}>Admin</p>
-        <button
-          onClick={() => setTab("products")}
-          className={tab === "products" ? styles.tabActive : styles.tab}
-        >
-          Products
-        </button>
-        <button
-          onClick={() => setTab("orders")}
-          className={tab === "orders" ? styles.tabActive : styles.tab}
-        >
-          Orders
-        </button>
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={tab === t.id ? styles.tabActive : styles.tab}
+          >
+            {t.label}
+          </button>
+        ))}
       </aside>
 
       <section className={styles.main}>
-        {tab === "products" ? <AdminProducts /> : <AdminOrders />}
+        {tab === "products" && <AdminProducts />}
+        {tab === "orders" && <AdminOrders />}
+        {tab === "coupons" && <AdminCoupons />}
       </section>
     </div>
   );

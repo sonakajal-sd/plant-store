@@ -5,7 +5,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 import type { Prisma } from "../src/generated/prisma/client";
-import { sizeExtraPrice, getDeliveryFee, calculateDiscount } from "../src/utils/pricing";
+import { sizeExtraPrice, getOrderTotals, calculateDiscount } from "../src/utils/pricing";
 import type { SizeName } from "../src/utils/pricing";
 import { starterProducts } from "./starterProducts";
 
@@ -89,7 +89,7 @@ function daysAgo(days: number): Date {
 }
 
 const coupons: Prisma.CouponCreateManyInput[] = [
-  { code: "WELCOME10", type: "PERCENT", value: 10, minOrder: 499, maxDiscount: 200 },
+  { code: "WELCOME10", type: "PERCENT", value: 10, minOrder: 499, maxDiscount: 200, perUserLimit: 1 },
   { code: "FLAT100", type: "FLAT", value: 100, minOrder: 999 },
   { code: "PLANT50", type: "FLAT", value: 50, minOrder: 0, usageLimit: 3 },
   { code: "EXPIRED20", type: "PERCENT", value: 20, minOrder: 0, expiresAt: daysAgo(1) },
@@ -240,8 +240,8 @@ async function main() {
       }
     }
 
-    // Delivery is based on the subtotal AFTER the discount
-    const deliveryFee = getDeliveryFee(subtotal - discount);
+    // Delivery is based on the subtotal AFTER the discount (same helper as the server)
+    const { deliveryFee, total } = getOrderTotals(subtotal, discount);
     const createdAt = daysAgo(plan.daysAgo);
 
     await prisma.order.create({
@@ -252,7 +252,7 @@ async function main() {
         subtotal: subtotal,
         discount: discount,
         deliveryFee: deliveryFee,
-        total: subtotal - discount + deliveryFee,
+        total: total,
         couponCode: plan.coupon ?? null,
         status: plan.status,
         paymentMethod: "COD",

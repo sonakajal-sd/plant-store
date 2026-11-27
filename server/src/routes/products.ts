@@ -3,6 +3,8 @@ import type { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireAdmin, optionalAuth } from "../middleware/auth";
 import { LIGHT_OPTIONS } from "../utils/pricing";
+import { readPage } from "../utils/pagination";
+import type { Prisma } from "../generated/prisma/client";
 
 const router = Router();
 
@@ -20,6 +22,10 @@ type ProductInput = {
   isActive?: boolean;
 };
 
+// Sensible upper limits, so a typo (an extra 0) can't create silly data
+const MAX_PRICE = 1_000_000;
+const MAX_STOCK = 100_000;
+
 // true only for real text that isn't just spaces
 function isFilled(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
@@ -30,11 +36,11 @@ function validateProduct(body: Partial<ProductInput> | undefined): string | null
   if (!body) return "Product details are missing";
   if (!isFilled(body.name)) return "Name is required";
   if (!isFilled(body.category)) return "Category is required";
-  if (!Number.isInteger(body.price) || (body.price as number) <= 0) {
-    return "Price must be a whole number above 0";
+  if (!Number.isInteger(body.price) || (body.price as number) < 1 || (body.price as number) > MAX_PRICE) {
+    return "Price must be a whole number from 1 to 10,00,000";
   }
-  if (!Number.isInteger(body.stock) || (body.stock as number) < 0) {
-    return "Stock must be a whole number, 0 or more";
+  if (!Number.isInteger(body.stock) || (body.stock as number) < 0 || (body.stock as number) > MAX_STOCK) {
+    return "Stock must be a whole number from 0 to 1,00,000";
   }
   if (typeof body.light !== "string" || !LIGHT_OPTIONS.includes(body.light)) {
     return "Light must be one of: " + LIGHT_OPTIONS.join(", ");
@@ -60,22 +66,103 @@ function isAdminRequest(res: Response): boolean {
   return res.locals.user?.role === "ADMIN";
 }
 
-// GET /api/products
-//   ?category=Indoor          → only that category
-//   ?ids=3,7,12               → only these products (used to refresh the cart)
-//   ?includeArchived=true     → also archived products (admin only)
+const SORTS = ["popular", "newest", "price-asc", "price-desc"];
+
+// How each sort option orders the products (id last, so the order is always the same)
+const SORT_ORDER: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
+  popular: [{ orderItems: { _count: "desc" } }, { id: "asc" }], // most often ordered first
+  newest: [{ createdAt: "desc" }, { id: "desc" }],
+  "price-asc": [{ price: "asc" }, { id: "asc" }],
+  "price-desc": [{ price: "desc" }, { id: "asc" }],
+};
+
+// Adds the star rating to each product: ratingAverage (e.g. 4.3, or null) and ratingCount
+async function withRatings<T extends { id: number }>(products: T[]) {
+  const groups = await prisma.review.groupBy({
+    by: ["productId"],
+    where: { productId: { in: products.map((p) => p.id) } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const byProduct = new Map(groups.map((g) => [g.productId, g]));
+
+  return products.map((p) => {
+    const group = byProduct.get(p.id);
+    const average = group?._avg.rating ?? null;
+    return {
+      ...p,
+      ratingAverage: average === null ? null : Math.round(average * 10) / 10, // one decimal
+      ratingCount: group?._count.rating ?? 0,
+    };
+  });
+}
+
+// Reads a price filter from the URL. undefined = not given, null = not a valid number.
+function readPrice(value: unknown): number | null | undefined {
+  if (value === undefined || value === "") return undefined;
+  const price = Number(value);
+  return Number.isInteger(price) && price >= 0 ? price : null;
+}
+
+// GET /api/products — every filter is optional:
+//   ?search=fern              name, category or description contains "fern"
+//   ?category=Indoor
+//   ?minPrice=200&maxPrice=800
+//   ?light=Full sun
+//   ?petSafe=true             only pet-safe plants
+//   ?inStock=true             hide sold-out plants
+//   ?sort=popular|newest|price-asc|price-desc
+//   ?page=2&pageSize=12
+//   ?ids=3,7,12               only these products (used to refresh the cart)
+//   ?archived=true            ONLY archived products (admin only)
+// Answer: { items, total, page, pageSize }
 router.get("/", optionalAuth, async (req, res) => {
-  const { category, ids, includeArchived } = req.query;
+  const q = req.query;
+  const where: Prisma.ProductWhereInput = {};
 
-  // Build the filter step by step
-  const where: { category?: string; id?: { in: number[] }; isActive?: boolean } = {};
+  // Customers only ever see active products
+  where.isActive = !(q.archived === "true" && isAdminRequest(res));
 
-  if (typeof category === "string" && category !== "") {
-    where.category = category;
+  if (typeof q.search === "string" && q.search.trim() !== "") {
+    const text = q.search.trim();
+    where.OR = [
+      { name: { contains: text, mode: "insensitive" } }, // "insensitive" = ignore upper/lower case
+      { category: { contains: text, mode: "insensitive" } },
+      { description: { contains: text, mode: "insensitive" } },
+    ];
   }
 
-  if (typeof ids === "string" && ids !== "") {
-    const idList = ids.split(",").map(Number);
+  if (typeof q.category === "string" && q.category !== "") {
+    where.category = q.category;
+  }
+
+  if (typeof q.light === "string" && q.light !== "") {
+    if (!LIGHT_OPTIONS.includes(q.light)) {
+      res.status(400).json({ error: "light must be one of: " + LIGHT_OPTIONS.join(", ") });
+      return;
+    }
+    where.light = q.light;
+  }
+
+  if (q.petSafe === "true") where.petSafe = true;
+  if (q.inStock === "true") where.stock = { gt: 0 };
+
+  const minPrice = readPrice(q.minPrice);
+  const maxPrice = readPrice(q.maxPrice);
+  if (minPrice === null || maxPrice === null) {
+    res.status(400).json({ error: "Prices must be whole numbers, 0 or more" });
+    return;
+  }
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    res.status(400).json({ error: "The minimum price can't be more than the maximum" });
+    return;
+  }
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = { gte: minPrice, lte: maxPrice }; // undefined parts are ignored
+  }
+
+  if (typeof q.ids === "string" && q.ids !== "") {
+    const idList = q.ids.split(",").map(Number);
     if (!idList.every(Number.isInteger)) {
       res.status(400).json({ error: "ids must be a list of numbers, e.g. 1,2,3" });
       return;
@@ -83,14 +170,32 @@ router.get("/", optionalAuth, async (req, res) => {
     where.id = { in: idList };
   }
 
-  // Everyone sees only active products, except the admin when they ask for archived ones too
-  const showArchived = includeArchived === "true" && isAdminRequest(res);
-  if (!showArchived) {
-    where.isActive = true;
+  const sort = typeof q.sort === "string" && q.sort !== "" ? q.sort : "popular";
+  if (!SORTS.includes(sort)) {
+    res.status(400).json({ error: "sort must be one of: " + SORTS.join(", ") });
+    return;
   }
 
-  const products = await prisma.product.findMany({ where: where, orderBy: { id: "asc" } });
-  res.json(products);
+  const { page, pageSize, skip } = readPage(q, 12);
+
+  // Ask for this page AND the total count at the same time
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({ where: where, orderBy: SORT_ORDER[sort], skip: skip, take: pageSize }),
+    prisma.product.count({ where: where }),
+  ]);
+
+  res.json({ items: await withRatings(products), total: total, page: page, pageSize: pageSize });
+});
+
+// GET /api/products/stats  (numbers for the admin's top cards)
+// (Must come BEFORE "/:id", otherwise "stats" would be read as an id.)
+router.get("/stats", requireAuth, requireAdmin, async (_req, res) => {
+  const [active, outOfStock, archived] = await Promise.all([
+    prisma.product.count({ where: { isActive: true } }),
+    prisma.product.count({ where: { isActive: true, stock: 0 } }),
+    prisma.product.count({ where: { isActive: false } }),
+  ]);
+  res.json({ active, outOfStock, archived });
 });
 
 // GET /api/products/3
@@ -110,7 +215,8 @@ router.get("/:id", optionalAuth, async (req, res) => {
     return;
   }
 
-  res.json(product);
+  const [withRating] = await withRatings([product]);
+  res.json(withRating);
 });
 
 // POST /api/products  (add a new product)

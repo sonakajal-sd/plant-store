@@ -176,3 +176,73 @@
 .emptyIcon {
   font-size: 56px;
 }
+/* Discount line in the summary */
+.discount {
+  color: var(--olive);
+}
+
+/* Coupon box */
+.couponForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.couponRow {
+  display: flex;
+  gap: 8px;
+}
+
+.couponRow input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--beige);
+  background: var(--cream);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.couponRow button {
+  border: 0;
+  background: var(--brown);
+  color: var(--cream);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.couponRow button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.couponApplied {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #e7ecd9;
+  color: var(--olive);
+}
+
+.couponError {
+  width: 100%;
+  margin: 0;
+  color: var(--terracotta);
+  font-size: 13px;
+}
+
+.linkButton {
+  border: 0;
+  background: none;
+  color: var(--terracotta);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

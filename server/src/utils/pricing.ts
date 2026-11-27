@@ -34,7 +34,7 @@ export type CouponRule = {
 // How many rupees a coupon takes off this subtotal.
 // (Checking expiry, minimum order and usage limit is done by the caller.)
 export function calculateDiscount(coupon: CouponRule, subtotal: number): number {
-  let discount = 0;
+  let discount: number;
 
   if (coupon.type === "PERCENT") {
     // Round down, so we never give away more than the percent
@@ -48,4 +48,13 @@ export function calculateDiscount(coupon: CouponRule, subtotal: number): number 
 
   // A discount can never be more than the subtotal
   return Math.min(discount, subtotal);
+}
+
+// ---------- Order totals ----------
+
+// Delivery is worked out on the subtotal AFTER the discount.
+export function getOrderTotals(subtotal: number, discount: number) {
+  const afterDiscount = subtotal - discount;
+  const deliveryFee = getDeliveryFee(afterDiscount);
+  return { deliveryFee: deliveryFee, total: afterDiscount + deliveryFee };
 }

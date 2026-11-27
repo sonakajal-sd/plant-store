@@ -22,12 +22,16 @@ function validate(form: LoginForm, mode: Mode): FormErrors {
   // Name is only needed when creating an account
   if (mode === "register" && form.name.trim() === "") {
     errors.name = "Please enter your name";
+  } else if (mode === "register" && form.name.trim().length > 60) {
+    errors.name = "Name can be at most 60 characters";
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.email = "Enter a valid email, like you@example.com";
   }
   if (form.password.length < 8) {
     errors.password = "Password must be at least 8 characters";
+  } else if (mode === "register" && form.password.length > 72) {
+    errors.password = "Password can be at most 72 characters";
   }
 
   return errors;

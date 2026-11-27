@@ -47,12 +47,13 @@ enum Size {
 // ---------- Tables ----------
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String // will be a hashed password, never plain text
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  password     String // will be a hashed password, never plain text
+  role         Role     @default(USER)
+  tokenVersion Int      @default(0) // +1 on password change → older tokens stop working
+  createdAt    DateTime @default(now())
 
   orders              Order[]
   reviews             Review[]
@@ -123,17 +124,18 @@ model OrderItem {
 }
 
 model Coupon {
-  id          Int        @id @default(autoincrement())
-  code        String     @unique // always saved in UPPERCASE, e.g. "WELCOME10"
-  type        CouponType
-  value       Int
-  minOrder    Int        @default(0) // subtotal needed to use it
-  maxDiscount Int? // biggest discount for PERCENT coupons (null = no cap)
-  expiresAt   DateTime? // null = never expires
-  isActive    Boolean    @default(true)
-  usageLimit  Int? // how many times it can be used in total (null = no limit)
-  usedCount   Int        @default(0)
-  createdAt   DateTime   @default(now())
+  id           Int        @id @default(autoincrement())
+  code         String     @unique // always saved in UPPERCASE, e.g. "WELCOME10"
+  type         CouponType
+  value        Int
+  minOrder     Int        @default(0) // subtotal needed to use it
+  maxDiscount  Int? // biggest discount for PERCENT coupons (null = no cap)
+  expiresAt    DateTime? // null = never expires
+  isActive     Boolean    @default(true)
+  usageLimit   Int? // how many times it can be used in total (null = no limit)
+  perUserLimit Int? // uses per customer (null = no limit)
+  usedCount    Int        @default(0)
+  createdAt    DateTime   @default(now())
 }
 
 model Review {

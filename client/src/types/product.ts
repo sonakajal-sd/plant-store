@@ -14,10 +14,34 @@ export type Product = {
   petSafe: boolean;
   imageUrl: string | null; // null = no photo yet (we show 🪴)
   isActive: boolean; // false = archived (hidden from the shop)
+  ratingAverage: number | null; // e.g. 4.3 (null = no reviews yet)
+  ratingCount: number;
 };
 
 export type Size = "Small" | "Medium" | "Large";
 
 // The data we send to create/update a product.
-// The id is chosen by the database, and photos are uploaded separately.
-export type ProductInput = Omit<Product, "id" | "imageUrl">;
+// The id is chosen by the database, photos are uploaded separately,
+// and the rating comes from reviews.
+export type ProductInput = Omit<Product, "id" | "imageUrl" | "ratingAverage" | "ratingCount">;
+
+export type SortOption = "popular" | "newest" | "price-asc" | "price-desc";
+
+// The filters the product list understands (all optional)
+export type ProductQuery = {
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  light?: LightLevel;
+  petSafe?: boolean;
+  inStock?: boolean;
+  sort?: SortOption;
+  page?: number;
+  pageSize?: number;
+  ids?: number[]; // only these products (used to refresh the cart)
+  archived?: boolean; // admin only: ONLY archived products
+};
+
+// Numbers for the admin's top cards
+export type ProductStats = { active: number; outOfStock: number; archived: number };

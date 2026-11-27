@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/context/auth/useAuth";
 import { AUTH_EXPIRED_EVENT } from "@/services/apiClient";
+import { isObject, loadSaved } from "@/utils/storage";
 import type { User } from "@/types/user";
 
 const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please log in again.";
@@ -12,9 +13,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logged in only if we have BOTH a saved user and a saved token
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem("user");
-    const savedToken = localStorage.getItem("token");
-    return savedUser && savedToken ? (JSON.parse(savedUser) as User) : null;
+    if (!localStorage.getItem("token")) return null;
+    // A saved user must at least have an id, a name and a role
+    return loadSaved<User | null>(
+      "user",
+      (v) => isObject(v) && typeof v.id === "number" && typeof v.name === "string" && typeof v.role === "string",
+      null
+    );
   });
 
   // When any API call says "401" (token expired), apiClient sends a signal.
@@ -43,10 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  // Keep the saved copy in the browser up to date too
+  function updateUser(newUser: User) {
+    localStorage.setItem("user", JSON.stringify(newUser));
+    setUser(newUser);
+  }
+
   const isAdmin = user?.role === "ADMIN";
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

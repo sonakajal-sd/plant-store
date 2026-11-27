@@ -16,18 +16,23 @@ function publicUser(user: User) {
 
 // POST /api/auth/register  (create a new account)
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password } = req.body ?? {}; // body is undefined if no JSON was sent
 
   if (typeof name !== "string" || name.trim() === "") {
     res.status(400).json({ error: "Please enter your name" });
+    return;
+  }
+  if (name.trim().length > 60) {
+    res.status(400).json({ error: "Name can be at most 60 characters" });
     return;
   }
   if (typeof email !== "string" || !EMAIL_REGEX.test(email)) {
     res.status(400).json({ error: "Please enter a valid email" });
     return;
   }
-  if (typeof password !== "string" || password.length < 8) {
-    res.status(400).json({ error: "Password must be at least 8 characters" });
+  if (typeof password !== "string" || password.length < 8 || password.length > 72) {
+    // bcrypt only looks at the first 72 bytes, so longer passwords aren't safer
+    res.status(400).json({ error: "Password must be 8 to 72 characters" });
     return;
   }
 
@@ -47,13 +52,13 @@ router.post("/register", async (req, res) => {
     data: { name: name.trim(), email: cleanEmail, password: hashedPassword },
   });
 
-  const token = createToken({ userId: user.id, role: user.role });
+  const token = createToken({ userId: user.id, role: user.role, tokenVersion: user.tokenVersion });
   res.status(201).json({ token: token, user: publicUser(user) });
 });
 
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body ?? {};
 
   if (typeof email !== "string" || typeof password !== "string") {
     res.status(400).json({ error: "Email and password are required" });
@@ -73,7 +78,7 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  const token = createToken({ userId: user.id, role: user.role });
+  const token = createToken({ userId: user.id, role: user.role, tokenVersion: user.tokenVersion });
   res.json({ token: token, user: publicUser(user) });
 });
 
@@ -89,6 +94,63 @@ router.get("/me", requireAuth, async (_req, res) => {
   }
 
   res.json(publicUser(user));
+});
+
+// PUT /api/auth/me  (change my name)
+router.put("/me", requireAuth, async (req, res) => {
+  const { name } = req.body ?? {};
+  if (typeof name !== "string" || name.trim() === "") {
+    res.status(400).json({ error: "Please enter your name" });
+    return;
+  }
+  if (name.trim().length > 60) {
+    res.status(400).json({ error: "Name can be at most 60 characters" });
+    return;
+  }
+
+  const user = await prisma.user.update({
+    where: { id: res.locals.user.userId },
+    data: { name: name.trim() },
+  });
+  res.json(publicUser(user));
+});
+
+// POST /api/auth/change-password  (needs the CURRENT password, so a stolen
+// logged-in laptop can't simply lock the real owner out)
+router.post("/change-password", requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body ?? {};
+
+  if (typeof currentPassword !== "string" || currentPassword === "") {
+    res.status(400).json({ error: "Please enter your current password" });
+    return;
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 72) {
+    res.status(400).json({ error: "The new password must be 8 to 72 characters" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: res.locals.user.userId } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const correct = await bcrypt.compare(currentPassword, user.password);
+  if (!correct) {
+    // 400, not 401: a 401 would log the user out in the app
+    res.status(400).json({ error: "Your current password is wrong" });
+    return;
+  }
+
+  // tokenVersion + 1 → every OLD token (e.g. on another laptop) stops working
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { password: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
+  });
+
+  // A NEW token, so the person who changed the password stays logged in here
+  const token = createToken({ userId: updated.id, role: updated.role, tokenVersion: updated.tokenVersion });
+  res.json({ message: "Your password was changed", token: token });
 });
 
 export default router;

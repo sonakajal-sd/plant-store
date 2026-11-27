@@ -7,7 +7,7 @@ import { useCart } from "@/context/cart/useCart";
 import { useCartRefresh } from "@/hooks/useCartRefresh";
 import { placeOrder } from "@/services/orderService";
 import { formatOrderId } from "@/utils/format";
-import { getItemPrice, getDeliveryFee } from "@/utils/pricing";
+import { getItemPrice, getOrderTotals } from "@/utils/pricing";
 import type { CustomerDetails, Order } from "@/types/order";
 import styles from "./Checkout.module.css";
 
@@ -66,7 +66,7 @@ function Field({ label, name, value, error, placeholder, onChange }: FieldProps)
 // ---- The page ----
 function Checkout() {
   const { user } = useAuth();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, discount, coupon, couponProblem, clearCart } = useCart();
   // Check the latest prices and stock before the customer pays
   const refresh = useCartRefresh();
 
@@ -80,9 +80,8 @@ function Checkout() {
   const [placing, setPlacing] = useState(false); // true while waiting for the server
   const [serverError, setServerError] = useState("");
 
-  // Shown in the summary. The server works out the real total.
-  const delivery = getDeliveryFee(subtotal);
-  const total = subtotal + delivery;
+  // Shown in the summary. The server works out the real total (same rules).
+  const { deliveryFee: delivery, total } = getOrderTotals(subtotal, discount);
 
   // One function updates ANY input, using the input's "name"
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
@@ -103,7 +102,9 @@ function Checkout() {
 
     try {
       // The server checks stock, works out the prices and saves the order
-      const order = await placeOrder(form, items);
+      // Only send the coupon if it counts (subtotal reached its minimum)
+      const couponCode = coupon && discount > 0 ? coupon.code : null;
+      const order = await placeOrder(form, items, couponCode);
       clearCart();
       setPlacedOrder(order);
     } catch (err) {
@@ -208,6 +209,14 @@ function Checkout() {
               <strong>₹ {getItemPrice(item) * item.quantity}</strong>
             </div>
           ))}
+
+          {discount > 0 && coupon && (
+            <div className={styles.line}>
+              <span>Discount ({coupon.code})</span>
+              <strong>− ₹ {discount}</strong>
+            </div>
+          )}
+          {couponProblem && <p className={styles.couponNote}>{couponProblem}</p>}
 
           <div className={styles.line}>
             <span>Delivery</span>

@@ -2,7 +2,9 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import type { OrderStatus } from "../generated/prisma/client";
 import { requireAuth, requireAdmin } from "../middleware/auth";
-import { SIZES, sizeExtraPrice, getDeliveryFee } from "../utils/pricing";
+import { SIZES, sizeExtraPrice, calculateDiscount, getOrderTotals } from "../utils/pricing";
+import { checkCoupon, checkPerUserLimit, normaliseCode } from "../utils/coupons";
+import { readPage } from "../utils/pagination";
 import type { SizeName } from "../utils/pricing";
 
 const router = Router();
@@ -26,6 +28,17 @@ type OrderItemInput = {
 };
 
 const STATUSES = ["Placed", "Shipped", "Delivered", "Cancelled"];
+
+// Where an order may go next. Orders only move FORWARD, and Delivered/Cancelled are final.
+const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
+  Placed: ["Shipped", "Cancelled"],
+  Shipped: ["Delivered", "Cancelled"],
+  Delivered: [],
+  Cancelled: [],
+};
+
+// The most of one plant (in one size) a customer can order at once
+const MAX_QUANTITY = 20;
 
 // What we send back with every order: its items with their product
 const withItems = { items: { include: { product: true } } };
@@ -68,6 +81,9 @@ function validateItems(items: unknown): string | null {
     if (!Number.isInteger(item.quantity) || (item.quantity as number) < 1) {
       return "Invalid quantity in cart";
     }
+    if ((item.quantity as number) > MAX_QUANTITY) {
+      return `You can order at most ${MAX_QUANTITY} of one plant in one size`;
+    }
   }
   return null;
 }
@@ -96,7 +112,17 @@ async function cancelAndRestock(orderId: number, allowedStatuses: OrderStatus[])
       });
     }
 
-    return tx.order.findUniqueOrThrow({ where: { id: orderId }, include: withItemsAndUser });
+    const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: withItemsAndUser });
+
+    // Give the coupon use back, so the customer (or someone else) can use it again
+    if (order.couponCode) {
+      await tx.coupon.updateMany({
+        where: { code: order.couponCode, usedCount: { gt: 0 } },
+        data: { usedCount: { decrement: 1 } },
+      });
+    }
+
+    return order;
   });
 }
 
@@ -104,13 +130,19 @@ async function cancelAndRestock(orderId: number, allowedStatuses: OrderStatus[])
 
 // POST /api/orders  (place an order — must be logged in)
 router.post("/", requireAuth, async (req, res) => {
-  const { customer, items } = req.body ?? {}; // body is undefined if no JSON was sent
+  const { customer, items, couponCode } = req.body ?? {}; // body is undefined if no JSON was sent
 
   const error = validateCustomer(customer) ?? validateItems(items);
   if (error) {
     res.status(400).json({ error: error });
     return;
   }
+  // The coupon is optional, but if it's sent it must be text
+  if (couponCode !== undefined && couponCode !== null && typeof couponCode !== "string") {
+    res.status(400).json({ error: "Invalid coupon code" });
+    return;
+  }
+  const code = typeof couponCode === "string" && couponCode.trim() !== "" ? normaliseCode(couponCode) : null;
 
   const cartItems: OrderItemInput[] = items;
   const userId: number = res.locals.user.userId;
@@ -153,8 +185,41 @@ router.post("/", requireAuth, async (req, res) => {
         });
       }
 
-      const deliveryFee = getDeliveryFee(subtotal);
-      const total = subtotal + deliveryFee;
+      // Coupon: the SERVER checks it again and works out the discount itself
+      let discount = 0;
+      if (code) {
+        const coupon = await tx.coupon.findUnique({ where: { code: code } });
+        const couponError = checkCoupon(coupon, subtotal);
+        if (couponError || !coupon) {
+          throw new OrderError(couponError ?? "This coupon code doesn't exist");
+        }
+        discount = calculateDiscount(coupon, subtotal);
+
+        // Count this use — but only if the limit isn't reached yet.
+        // (Checked by the database at the moment of the update, so two orders can't both
+        //  take the last use. "fields.usageLimit" compares two columns of the same row.)
+        const used = await tx.coupon.updateMany({
+          where: {
+            id: coupon.id,
+            OR: [{ usageLimit: null }, { usedCount: { lt: tx.coupon.fields.usageLimit } }],
+          },
+          data: { usedCount: { increment: 1 } },
+        });
+        if (used.count === 0) {
+          throw new OrderError("This coupon has reached its usage limit");
+        }
+
+        // Per customer: checked AFTER the update above on purpose. That update locks
+        // the coupon's row until this order is saved, so a second order with the same
+        // coupon at the same moment has to wait — and then it counts this order too.
+        const perUserError = await checkPerUserLimit(tx, coupon, userId);
+        if (perUserError) {
+          throw new OrderError(perUserError);
+        }
+      }
+
+      // Delivery is worked out on the subtotal AFTER the discount
+      const { deliveryFee, total } = getOrderTotals(subtotal, discount);
 
       // Create the order AND its items in one go
       return tx.order.create({
@@ -167,6 +232,8 @@ router.post("/", requireAuth, async (req, res) => {
           state: customer.state.trim(),
           pincode: customer.pincode,
           subtotal: subtotal,
+          discount: discount,
+          couponCode: code, // null when no coupon was used
           deliveryFee: deliveryFee,
           total: total,
           items: { create: orderItems },
@@ -187,22 +254,47 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 // GET /api/orders/my  (my own orders, newest first)
-router.get("/my", requireAuth, async (_req, res) => {
-  const orders = await prisma.order.findMany({
-    where: { userId: res.locals.user.userId },
-    include: withItems,
-    orderBy: { createdAt: "desc" },
-  });
-  res.json(orders);
+// Answer: { items, total, page, pageSize }  (10 per page)
+router.get("/my", requireAuth, async (req, res) => {
+  const where = { userId: res.locals.user.userId as number };
+  const { page, pageSize, skip } = readPage(req.query, 10);
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where: where,
+      include: withItems,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: skip,
+      take: pageSize,
+    }),
+    prisma.order.count({ where: where }),
+  ]);
+  res.json({ items: orders, total: total, page: page, pageSize: pageSize });
 });
 
-// GET /api/orders  (ALL orders — admin only)
-router.get("/", requireAuth, requireAdmin, async (_req, res) => {
-  const orders = await prisma.order.findMany({
-    include: withItemsAndUser,
-    orderBy: { createdAt: "desc" },
-  });
-  res.json(orders);
+// GET /api/orders?page=1&pageSize=20  (ALL orders — admin only)
+// Answer: { items, total, page, pageSize }
+router.get("/", requireAuth, requireAdmin, async (req, res) => {
+  const { page, pageSize, skip } = readPage(req.query, 20);
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      include: withItemsAndUser,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: skip,
+      take: pageSize,
+    }),
+    prisma.order.count(),
+  ]);
+  res.json({ items: orders, total: total, page: page, pageSize: pageSize });
+});
+
+// GET /api/orders/stats  (numbers for the admin's top cards)
+router.get("/stats", requireAuth, requireAdmin, async (_req, res) => {
+  const [toShip, onTheWay, all] = await Promise.all([
+    prisma.order.count({ where: { status: "Placed" } }),
+    prisma.order.count({ where: { status: "Shipped" } }),
+    prisma.order.count(),
+  ]);
+  res.json({ toShip, onTheWay, all });
 });
 
 // PATCH /api/orders/5/cancel  (a customer cancels their OWN order, only while it's Placed)
@@ -257,18 +349,19 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
     return;
   }
 
-  // Re-opening a cancelled order would need its stock taken out again, so it's final
-  if (existing.status === "Cancelled") {
-    res.status(400).json({ error: "A cancelled order can't be changed" });
+  // Only forward steps: Placed → Shipped → Delivered, or Placed/Shipped → Cancelled
+  const allowed = NEXT_STATUSES[existing.status];
+  if (!allowed.includes(status)) {
+    let message = `A ${existing.status} order can't be changed to ${status}`;
+    if (existing.status === "Cancelled") message = "A cancelled order can't be changed";
+    else if (existing.status === "Delivered") message = "A delivered order can't be changed";
+    else if (status === existing.status) message = `This order is already ${status}`;
+    res.status(400).json({ error: message });
     return;
   }
 
-  // Cancelling puts the stock back. A delivered order can't be cancelled.
+  // Cancelling puts the stock back
   if (status === "Cancelled") {
-    if (existing.status === "Delivered") {
-      res.status(400).json({ error: "A delivered order can't be cancelled" });
-      return;
-    }
     try {
       const order = await cancelAndRestock(id, ["Placed", "Shipped"]);
       res.json(order);
@@ -282,11 +375,18 @@ router.patch("/:id/status", requireAuth, requireAdmin, async (req, res) => {
     return;
   }
 
-  const order = await prisma.order.update({
-    where: { id: id },
+  // Change it ONLY if the status is still what we just read. If someone cancelled it
+  // in the meantime, nothing is changed (instead of overwriting the cancel).
+  const changed = await prisma.order.updateMany({
+    where: { id: id, status: existing.status },
     data: { status: status },
-    include: withItemsAndUser,
   });
+  if (changed.count === 0) {
+    res.status(409).json({ error: "This order was just changed by someone else. Please refresh." });
+    return;
+  }
+
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: id }, include: withItemsAndUser });
   res.json(order);
 });
 

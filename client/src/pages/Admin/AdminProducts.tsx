@@ -2,14 +2,18 @@ import { useEffect, useState } from "react";
 import {
   createProduct,
   fetchProducts,
+  fetchProductStats,
   removeProduct,
   updateProduct,
 } from "@/services/productService";
-import type { Product, ProductInput } from "@/types/product";
+import Pagination from "@/components/Pagination/Pagination";
+import type { Product, ProductInput, ProductStats } from "@/types/product";
 import ProductForm from "./ProductForm";
 import styles from "./Admin.module.css";
 
 type Filter = "active" | "archived";
+
+const PAGE_SIZE = 20;
 
 // The form is closed, open for a new product, or open to edit one product
 type FormState = { open: false } | { open: true; product: Product | null };
@@ -24,20 +28,56 @@ function toInput(p: Product): ProductInput {
 
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0); // how many in this list (all pages)
+  const [stats, setStats] = useState<ProductStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<Filter>("active");
+  const [page, setPage] = useState(1);
+  const [reloadCount, setReloadCount] = useState(0); // +1 = load the page again
   const [form, setForm] = useState<FormState>({ open: false });
   const [notice, setNotice] = useState(""); // e.g. "Snake Plant was archived"
   const [busyId, setBusyId] = useState<number | null>(null); // row that is saving
 
-  // Load ALL products, archived ones too (only the admin can ask for those)
+  // Load this page of the list AND the numbers for the top cards.
+  // Runs again when the filter or page changes, or after any change (reloadCount).
   useEffect(() => {
-    fetchProducts({ includeArchived: true })
-      .then((data) => setProducts(data))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+    let ignore = false;
+    Promise.all([
+      fetchProducts({ archived: filter === "archived", page: page, pageSize: PAGE_SIZE, sort: "newest" }),
+      fetchProductStats(),
+    ])
+      .then(([result, newStats]) => {
+        if (ignore) return;
+        // The last item on this page was removed → go back one page
+        if (result.items.length === 0 && result.page > 1) {
+          setPage(result.page - 1);
+          return;
+        }
+        setProducts(result.items);
+        setTotal(result.total);
+        setStats(newStats);
+        setError("");
+      })
+      .catch((err: Error) => {
+        if (!ignore) setError(err.message);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [filter, page, reloadCount]);
+
+  function reload() {
+    setReloadCount((n) => n + 1);
+  }
+
+  function changeFilter(newFilter: Filter) {
+    setFilter(newFilter);
+    setPage(1);
+  }
 
   // Put the server's version of a product into the list
   function replaceInList(updated: Product) {
@@ -47,14 +87,13 @@ function AdminProducts() {
   async function handleSave(input: ProductInput) {
     if (form.open && form.product) {
       const updated = await updateProduct(form.product.id, input);
-      replaceInList(updated);
       setNotice(`${updated.name} was saved.`);
     } else {
       const created = await createProduct(input);
-      setProducts((list) => [...list, created]);
       setNotice(`${created.name} was added.`);
     }
     setForm({ open: false });
+    reload(); // the product may have moved to the other list, and the numbers changed
   }
 
   // Runs an action for one row, with the row's buttons disabled meanwhile
@@ -74,52 +113,44 @@ function AdminProducts() {
     const newStock = Math.max(0, product.stock + amount);
     return runForRow(product.id, async () => {
       replaceInList(await updateProduct(product.id, { ...toInput(product), stock: newStock }));
+      reload(); // "Out of stock" number may change
     });
   }
 
   function handleDelete(product: Product) {
     if (!window.confirm(`Delete ${product.name}?`)) return;
     return runForRow(product.id, async () => {
-      const result = await removeProduct(product.id);
-      if (result.archived && result.product) {
-        replaceInList(result.product); // in past orders → archived instead
-      } else {
-        setProducts((list) => list.filter((p) => p.id !== product.id));
-      }
+      const result = await removeProduct(product.id); // in past orders → archived instead
       setNotice(result.message);
+      reload();
     });
   }
 
   function handleRestore(product: Product) {
     return runForRow(product.id, async () => {
-      replaceInList(await updateProduct(product.id, { ...toInput(product), isActive: true }));
+      await updateProduct(product.id, { ...toInput(product), isActive: true });
       setNotice(`${product.name} is back in the shop.`);
+      reload();
     });
   }
 
   if (loading) return <p>Loading products…</p>;
-  if (error) return <p className={styles.error}>{error}</p>;
-
-  // Numbers for the top cards
-  const active = products.filter((p) => p.isActive);
-  const archived = products.filter((p) => !p.isActive);
-  const outOfStock = active.filter((p) => p.stock === 0).length;
-  const shown = filter === "active" ? active : archived;
+  if (error && !stats) return <p className={styles.error}>{error}</p>;
 
   return (
     <>
       <div className={styles.stats}>
         <div className={styles.stat}>
           <span>Products in the shop</span>
-          <strong>{active.length}</strong>
+          <strong>{stats?.active ?? "–"}</strong>
         </div>
         <div className={styles.stat}>
           <span>Out of stock</span>
-          <strong className={styles.red}>{outOfStock}</strong>
+          <strong className={styles.red}>{stats?.outOfStock ?? "–"}</strong>
         </div>
         <div className={styles.stat}>
           <span>Archived</span>
-          <strong>{archived.length}</strong>
+          <strong>{stats?.archived ?? "–"}</strong>
         </div>
       </div>
 
@@ -147,19 +178,21 @@ function AdminProducts() {
       <div className={styles.filterRow}>
         <button
           className={filter === "active" ? styles.statusActive : styles.statusButton}
-          onClick={() => setFilter("active")}
+          onClick={() => changeFilter("active")}
         >
-          Active ({active.length})
+          Active ({stats?.active ?? 0})
         </button>
         <button
           className={filter === "archived" ? styles.statusActive : styles.statusButton}
-          onClick={() => setFilter("archived")}
+          onClick={() => changeFilter("archived")}
         >
-          Archived ({archived.length})
+          Archived ({stats?.archived ?? 0})
         </button>
       </div>
 
-      {shown.length === 0 ? (
+      {error && <p className={styles.error}>{error}</p>}
+
+      {products.length === 0 ? (
         <p>{filter === "active" ? "No products yet." : "No archived products."}</p>
       ) : (
         <div className={styles.tableBox}>
@@ -174,7 +207,7 @@ function AdminProducts() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((p) => {
+              {products.map((p) => {
                 const busy = busyId === p.id;
                 return (
                   <tr key={p.id}>
@@ -220,6 +253,8 @@ function AdminProducts() {
           </table>
         </div>
       )}
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
     </>
   );
 }
