@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, requireAdmin, optionalAuth } from "../middleware/auth";
 import { LIGHT_OPTIONS } from "../utils/pricing";
 import { readPage } from "../utils/pagination";
+import { uploadImage } from "../middleware/upload";
+import { detectImageType, saveProductImage, deleteProductImage } from "../utils/files";
 import type { Prisma } from "../generated/prisma/client";
 
 const router = Router();
@@ -322,7 +324,84 @@ router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   }
 
   await prisma.product.delete({ where: { id: id } });
+  // The product is gone for good, so its photo file can go too
+  await deleteProductImage(existing.imageUrl);
   res.json({ archived: false, message: `${existing.name} was deleted.` });
+});
+
+
+// POST /api/products/3/image  (upload or REPLACE the photo — admin only)
+// The browser sends multipart/form-data with the file in the field "image".
+// Order matters: check the login FIRST, so strangers can't even send us files.
+router.post("/:id/image", requireAuth, requireAdmin, uploadImage, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid product id" });
+    return;
+  }
+
+  // No file, or the browser said it isn't JPG/PNG/WEBP (multer skipped it)
+  if (!req.file) {
+    res.status(400).json({ error: "Please choose a JPG, PNG or WEBP photo" });
+    return;
+  }
+
+  // Look at the file's FIRST BYTES to see what it really is
+  const type = detectImageType(req.file.buffer);
+  if (!type) {
+    res.status(400).json({ error: "This file isn't a real JPG, PNG or WEBP photo" });
+    return;
+  }
+
+  const existing = await prisma.product.findUnique({ where: { id: id } });
+  if (!existing) {
+    res.status(404).json({ error: "Product not found" });
+    return;
+  }
+
+  // 1. Save the new photo file
+  const newImageUrl = await saveProductImage(req.file.buffer, type.ext);
+
+  // 2. Save its address in the database
+  let product;
+  try {
+    product = await prisma.product.update({
+      where: { id: id },
+      data: { imageUrl: newImageUrl },
+    });
+  } catch (err) {
+    // The database failed → delete the new file, so no "orphan" file is left behind
+    await deleteProductImage(newImageUrl);
+    throw err;
+  }
+
+  // 3. Only now delete the OLD photo (if there was one)
+  await deleteProductImage(existing.imageUrl);
+
+  res.json(product);
+});
+
+// DELETE /api/products/3/image  (remove the photo — admin only)
+router.delete("/:id/image", requireAuth, requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid product id" });
+    return;
+  }
+
+  const existing = await prisma.product.findUnique({ where: { id: id } });
+  if (!existing) {
+    res.status(404).json({ error: "Product not found" });
+    return;
+  }
+
+  const product = await prisma.product.update({
+    where: { id: id },
+    data: { imageUrl: null }, // null = no photo → the website shows 🪴
+  });
+  await deleteProductImage(existing.imageUrl);
+
+  res.json(product);
 });
 
 export default router;

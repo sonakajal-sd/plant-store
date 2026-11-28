@@ -2,7 +2,10 @@ import multer from "multer";
 import type { Request, Response, NextFunction } from "express";
 
 export const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB in bytes
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+// Browsers send image/jpeg, image/png or image/webp. Some tools send "some file"
+// (application/octet-stream), e.g. for .webp. We let those through too, because the
+// route checks the file's FIRST BYTES anyway (detectImageType) — that's the real check.
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/octet-stream"];
 
 const upload = multer({
   // Keep the file in memory first, so we can CHECK it before saving it to disk
